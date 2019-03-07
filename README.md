@@ -3,7 +3,7 @@
 </p>
 <br>
 
-[![npm downloads](https://img.shields.io/github/downloads/bitvavo/node-bitvavo-api/total.svg)](https://github.com/bitvavo/node-bitvavo-api.git) 
+[![npm downloads](https://img.shields.io/github/downloads/bitvavo/java-bitvavo-api/total.svg)](https://github.com/bitvavo/java-bitvavo-api.git) 
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/c623a741dc96dc58d215)
 
 # Java Bitvavo Api

@@ -26,8 +26,13 @@ class example{
   }
 
   public static void testREST(Bitvavo bitvavo) {
-    System.out.println(bitvavo.time().toString(2));
     JSONArray response;
+
+    int remaining = bitvavo.getRemainingLimit();
+    if (remaining > 0) {
+      System.out.println("remaining limit is " + remaining);
+      System.out.println(bitvavo.time().toString(2));
+    }
 
     // response = bitvavo.markets(new JSONObject());
     // for(int i = 0; i < response.length(); i ++) {
@@ -337,4 +342,3 @@ class example{
     // });
   }
 }
-

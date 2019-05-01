@@ -39,7 +39,9 @@ This is the Java wrapper for the Bitvavo API. This project can be used to build 
   * [Book Subscription](https://github.com/bitvavo/java-bitvavo-api#book-subscription)
   * [Book Subscription With Local Copy](https://github.com/bitvavo/java-bitvavo-api#book-subscription-with-local-copy)
 
-## Installation  
+## Installation
+
+The java development kit 8 is required for websockets to function.
 
 Install with maven:
 

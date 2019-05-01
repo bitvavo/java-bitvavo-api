@@ -36,6 +36,9 @@ public class Bitvavo {
   JSONObject optionsSubscriptionBookFirst;
   JSONObject optionsSubscriptionBookSecond;
   public static final String base = "https://api.bitvavo.com/v2";
+  volatile int rateLimitRemaining = 1000;
+  volatile long rateLimitReset = 0;
+  volatile boolean rateLimitThreadStarted = false;
 
   public Bitvavo(JSONObject options) {
     JSONArray keys = options.names();
@@ -70,7 +73,7 @@ public class Bitvavo {
     }
     if (!debuggingSet) {
       this.debugging = false;
-    } 
+    }
   }
 
   public String getApiKey() {
@@ -130,6 +133,68 @@ public class Bitvavo {
     System.out.println(sdf.format(cal.getTime()) + " ERROR: " + message);
   }
 
+  public void errorRateLimit(JSONObject response) {
+    if (response.getInt("errorCode") == 105) {
+      rateLimitRemaining = 0;
+      String message = response.getString("error");
+      String placeHolder = message.split(" at ")[1].replace(".", "");
+      rateLimitReset = Long.parseLong(placeHolder);
+      if (!rateLimitThreadStarted) {
+        new Thread(new Runnable() {
+          public void run() {
+            try {
+              long timeToWait = rateLimitReset - System.currentTimeMillis();
+              rateLimitThreadStarted = true;
+              debugToConsole("We are waiting for " + ((int) timeToWait / (int) 1000) + " seconds, untill the rate limit ban will be lifted.");
+              Thread.sleep(timeToWait);
+            } catch (InterruptedException ie) {
+              errorToConsole("Got interrupted while waiting for the rate limit ban to be lifted.");
+            }
+            rateLimitThreadStarted = false;
+            if (System.currentTimeMillis() >= rateLimitReset) {
+              debugToConsole("Rate limit ban has been lifted, resetting rate limit to 1000.");
+              rateLimitRemaining = 1000;
+            }
+          }
+        }).start();
+      }
+    }
+  }
+
+  public void updateRateLimit(Map<String,List<String>> response) {
+    String remainingHeader = response.get("Bitvavo-Ratelimit-Remaining").get(0);
+    String resetHeader = response.get("Bitvavo-Ratelimit-ResetAt").get(0);
+    if(remainingHeader != null) {
+      rateLimitRemaining = Integer.parseInt(remainingHeader);
+    }
+    if(resetHeader != null) {
+      rateLimitReset = Long.parseLong(resetHeader);
+      if (!rateLimitThreadStarted) {
+        new Thread(new Runnable() {
+          public void run() {
+            try {
+              long timeToWait = rateLimitReset - System.currentTimeMillis();
+              rateLimitThreadStarted = true;
+              debugToConsole("We are waiting for " + ((int) timeToWait / (int) 1000) + " seconds, untill the rate limit ban will be lifted.");
+              Thread.sleep(timeToWait);
+            } catch (InterruptedException ie) {
+              errorToConsole("Got interrupted while waiting for the rate limit ban to be lifted.");
+            }
+            rateLimitThreadStarted = false;
+            if (System.currentTimeMillis() >= rateLimitReset) {
+              debugToConsole("Rate limit ban has been lifted, resetting rate limit to 1000.");
+              rateLimitRemaining = 1000;
+            }
+          }
+        }).start();
+      }
+    }
+  }
+
+  public int getRemainingLimit() {
+    return rateLimitRemaining;
+  }
+
   public JSONObject privateRequest(String urlEndpoint, String urlParams, String method, JSONObject body) {
     try {
       long timestamp = System.currentTimeMillis();
@@ -150,10 +215,13 @@ public class Bitvavo {
         outputStreamWriter.flush();
       }
 
+
       int responseCode = httpsCon.getResponseCode();
+      
       InputStream inputStream;
       if(responseCode == 200) {
         inputStream = httpsCon.getInputStream();
+        updateRateLimit(httpsCon.getHeaderFields());
       }
       else {
         inputStream = httpsCon.getErrorStream();
@@ -163,6 +231,9 @@ public class Bitvavo {
       String result = writer.toString();
 
       JSONObject response = new JSONObject(result);
+      if (result.contains("errorCode")) {
+        errorRateLimit(response);
+      }
       return response;
     }
     catch(Exception ex) {
@@ -192,9 +263,11 @@ public class Bitvavo {
       }
 
       int responseCode = httpsCon.getResponseCode();
+      
       InputStream inputStream;
       if(responseCode == 200) {
         inputStream = httpsCon.getInputStream();
+        updateRateLimit(httpsCon.getHeaderFields());
       }
       else {
         inputStream = httpsCon.getErrorStream();
@@ -205,6 +278,7 @@ public class Bitvavo {
       String result = writer.toString();
 
       if(result.contains("errorCode")) {
+        errorRateLimit(new JSONObject(result));
         errorToConsole(result);
         return new JSONArray();
       }
@@ -227,6 +301,7 @@ public class Bitvavo {
       InputStream inputStream;
       if(responseCode == 200) {
         inputStream = httpsCon.getInputStream();
+        updateRateLimit(httpsCon.getHeaderFields());
       }
       else {
         inputStream = httpsCon.getErrorStream();
@@ -236,6 +311,9 @@ public class Bitvavo {
       String result = writer.toString();
 
       JSONObject response = new JSONObject(result);
+      if (result.contains("errorCode")) {
+        errorRateLimit(response);
+      }
       return response;
     }
     catch(IOException ex) {
@@ -253,6 +331,7 @@ public class Bitvavo {
       InputStream inputStream;
       if(responseCode == 200) {
         inputStream = httpsCon.getInputStream();
+        updateRateLimit(httpsCon.getHeaderFields());
       }
       else {
         inputStream = httpsCon.getErrorStream();
@@ -262,6 +341,7 @@ public class Bitvavo {
       IOUtils.copy(inputStream, writer, "utf-8");
       String result = writer.toString();
       if(result.indexOf("error") != -1) {
+        errorRateLimit(new JSONObject(result));
         return new JSONArray("[" + result + "]");
       }
       debugToConsole("FULL RESPONSE: " + result);

@@ -182,27 +182,31 @@ public class WebsocketClientEndpoint {
     public void onClose(Session userSession, CloseReason reason) throws IOException {
         bitvavo.debugToConsole("closing websocket " + reason);
         this.userSession = null;
-        try {
-            bitvavo.authenticated = false;
-            WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(new URI("wss://api.bitvavo.com/v2/"), bitvavo);
-            copyHandlers(bitvavo.ws, clientEndPoint);
-            clientEndPoint.addAuthenticateHandler(new WebsocketClientEndpoint.MessageHandler() {
-                public void handleMessage(JSONObject response) {
-                    if(response.has("authenticated")) {
-                        bitvavo.authenticated = true;
-                        bitvavo.debugToConsole("We registered authenticated as true again");
+        if(bitvavo.getRemainingLimit() > 0) {
+            try {
+                bitvavo.authenticated = false;
+                WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(new URI("wss://api.bitvavo.com/v2/"), bitvavo);
+                copyHandlers(bitvavo.ws, clientEndPoint);
+                clientEndPoint.addAuthenticateHandler(new WebsocketClientEndpoint.MessageHandler() {
+                    public void handleMessage(JSONObject response) {
+                        if(response.has("authenticated")) {
+                            bitvavo.authenticated = true;
+                            bitvavo.debugToConsole("We registered authenticated as true again");
+                        }
                     }
-                }
-            });
-            clientEndPoint.addMessageHandler(new WebsocketClientEndpoint.MessageHandler() {
-                public void handleMessage(JSONObject response) {
-                    bitvavo.errorToConsole("Unexpected message: " + response);
-                }
-            });
-            bitvavo.ws = clientEndPoint;
-        }
-        catch(Exception ex) {
-            bitvavo.errorToConsole("We caught exception in reconnecting!" + ex);
+                });
+                clientEndPoint.addMessageHandler(new WebsocketClientEndpoint.MessageHandler() {
+                    public void handleMessage(JSONObject response) {
+                        bitvavo.errorToConsole("Unexpected message: " + response);
+                    }
+                });
+                bitvavo.ws = clientEndPoint;
+            }
+            catch(Exception ex) {
+                bitvavo.errorToConsole("We caught exception in reconnecting!" + ex);
+            }
+        } else {
+            bitvavo.debugToConsole("The websocket has been closed because your rate limit was reached, please wait till the ban is lifted and try again.");
         }
     }
 
@@ -296,6 +300,7 @@ public class WebsocketClientEndpoint {
         JSONObject response = new JSONObject(message);
         bitvavo.debugToConsole("FULLRESPONSE: " + response);
         if(response.has("error")) {
+            bitvavo.errorRateLimit(response);
             if(this.errorHandler != null) {
                 this.errorHandler.handleMessage(response);
                 return;

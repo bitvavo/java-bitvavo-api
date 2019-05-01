@@ -63,6 +63,15 @@ Or you can use the example as starting point for your own project. Create a new 
 mvn exec:java "-Dexec.mainClass=com.bitvavo.api.example.example"
 `
 
+## Rate Limiting
+
+Bitvavo uses a weight based rate limiting system, with an allowed limit of 1000 per IP or API key each minute. Please inspect each endpoint in the [documentation](https://docs.bitvavo.com/) to see the weight. Failure to respect the rate limit will result in an IP or API key ban.
+Since the remaining limit is returned in the header on each REST request, the remaining limit is tracked locally and can be requested through:
+```
+int remaining = bitvavo.getRemainingLimit();
+```
+The websocket functions however do not return a remaining limit, therefore the limit is only updated locally once a ban has been issued.
+
 ## REST requests
 
 The general convention used in all functions (both REST and websockets), is that all optional parameters are passed as an JSON object, while required parameters are passed as separate values. Only when [placing orders](https://github.com/bitvavo/java-bitvavo-api#place-order) some of the optional parameters are required, since a limit order requires more information than a market order. The returned responses are all converted to either a JSONObject or a JSONArray, depending on whether the function returns a single object or a list of objects. This means that when an array is supplied, the objects can be retrieved through: `JSONObject object = array.getJSONObject(<index>);` after which separate values can be retrieved through `String <value> = object.getString(<key>);`, `Int <value> = object.getInt(<key>);` and `boolean <value> = object.getBoolean(<key>);`. For information on which type a returned value has, consult the [documentation](https://docs.bitvavo.com/)

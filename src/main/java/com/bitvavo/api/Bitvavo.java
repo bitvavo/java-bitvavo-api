@@ -337,6 +337,15 @@ public class Bitvavo {
       URL url = new URL(urlString);
       HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
       httpsCon.setRequestMethod(method);
+      if (this.apiKey != "") {
+        long timestamp = System.currentTimeMillis();
+        String signature = createSignature(timestamp, method, urlString.replace(base, ""), new JSONObject());
+        httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
+        httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
+        httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
+        httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
+        httpsCon.setRequestProperty("Content-Type", "application/json");
+      }
       int responseCode = httpsCon.getResponseCode();
       InputStream inputStream;
       if(responseCode == 200) {

@@ -135,6 +135,7 @@ public class Bitvavo {
 
   public void errorRateLimit(JSONObject response) {
     if (response.getInt("errorCode") == 105) {
+      System.out.println("This is response " + response);
       rateLimitRemaining = 0;
       String message = response.getString("error");
       String placeHolder = message.split(" at ")[1].replace(".", "");
@@ -175,14 +176,14 @@ public class Bitvavo {
             try {
               long timeToWait = rateLimitReset - System.currentTimeMillis();
               rateLimitThreadStarted = true;
-              debugToConsole("We are waiting for " + ((int) timeToWait / (int) 1000) + " seconds, untill the rate limit ban will be lifted.");
+              debugToConsole("We started a thread which waits for " + ((int) timeToWait / (int) 1000) + " seconds, untill the rate limit will be reset.");
               Thread.sleep(timeToWait);
             } catch (InterruptedException ie) {
-              errorToConsole("Got interrupted while waiting for the rate limit ban to be lifted.");
+              errorToConsole("Got interrupted while waiting for the rate limit to be reset.");
             }
             rateLimitThreadStarted = false;
             if (System.currentTimeMillis() >= rateLimitReset) {
-              debugToConsole("Rate limit ban has been lifted, resetting rate limit to 1000.");
+              debugToConsole("Resetting rate limit to 1000.");
               rateLimitRemaining = 1000;
             }
           }
@@ -297,6 +298,15 @@ public class Bitvavo {
       URL url = new URL(urlString);
       HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
       httpsCon.setRequestMethod(method);
+      if (this.apiKey != "") {
+        long timestamp = System.currentTimeMillis();
+        String signature = createSignature(timestamp, method, urlString.replace(base, ""), new JSONObject());
+        httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
+        httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
+        httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
+        httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
+        httpsCon.setRequestProperty("Content-Type", "application/json");
+      }
       int responseCode = httpsCon.getResponseCode();
       InputStream inputStream;
       if(responseCode == 200) {

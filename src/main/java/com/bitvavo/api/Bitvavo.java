@@ -135,7 +135,6 @@ public class Bitvavo {
 
   public void errorRateLimit(JSONObject response) {
     if (response.getInt("errorCode") == 105) {
-      System.out.println("This is response " + response);
       rateLimitRemaining = 0;
       String message = response.getString("error");
       String placeHolder = message.split(" at ")[1].replace(".", "");

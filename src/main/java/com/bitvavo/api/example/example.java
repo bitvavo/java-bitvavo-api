@@ -308,6 +308,12 @@ class example{
     //   }
     // });
 
+    // ws.subscriptionTicker24h("BTC-EUR", new WebsocketClientEndpoint.MessageHandler() {
+    //   public void handleMessage(JSONObject response) {
+    //     System.out.println(response.toString(2));
+    //   }
+    // });
+
     // ws.subscriptionAccount("BTC-EUR", new WebsocketClientEndpoint.MessageHandler() {
     //   public void handleMessage(JSONObject response) {
     //     System.out.println(response.toString(2));

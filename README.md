@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://www.bitvavo.com"><img src="https://bitvavo.com/media/images/logo/bitvavoGeneral.svg" width="600" title="Bitvavo Logo"></a>
+  <a href="https://bitvavo.com"><img src="https://bitvavo.com/media/images/logo/bitvavoGeneral.svg" width="600" title="Bitvavo Logo"></a>
 </p>
 
 # Java Bitvavo Api
-This is the Java wrapper for the Bitvavo API. This project can be used to build your own projects which interact with the Bitvavo platform. Every function available on the API can be called through a REST request or over websockets. For info on the specifics of every parameter consult the [documentation](https://docs.bitvavo.com/)
+This is the Java wrapper for the Bitvavo API. This project can be used to build your own projects which interact with the Bitvavo platform. Every function available on the API can be called through a REST request or over websockets. For info on the specifics of every parameter consult the [Bitvavo API documentation](https://docs.bitvavo.com/)
 
 * Getting started       [REST](https://github.com/bitvavo/java-bitvavo-api#getting-started) [Websocket](https://github.com/bitvavo/java-bitvavo-api#getting-started-1)
 * General
@@ -33,6 +33,7 @@ This is the Java wrapper for the Bitvavo API. This project can be used to build 
   * Withdrawal History  [REST](https://github.com/bitvavo/java-bitvavo-api#get-withdrawal-history) [Websocket](https://github.com/bitvavo/java-bitvavo-api#get-withdrawal-history-1)
 * [Subscriptions](https://github.com/bitvavo/java-bitvavo-api#subscriptions)
   * [Ticker Subscription](https://github.com/bitvavo/java-bitvavo-api#ticker-subscription)
+  * [Ticker 24 Hour Subscription](https://github.com/bitvavo/java-bitvavo-api#ticker-24-hour-subscription)
   * [Account Subscription](https://github.com/bitvavo/java-bitvavo-api#account-subscription)
   * [Candles Subscription](https://github.com/bitvavo/java-bitvavo-api#candles-subscription)
   * [Trades Subscription](https://github.com/bitvavo/java-bitvavo-api#trades-subscription)
@@ -65,7 +66,7 @@ mvn exec:java "-Dexec.mainClass=com.bitvavo.api.example.example"
 
 ## Rate Limiting
 
-Bitvavo uses a weight based rate limiting system, with an allowed limit of 1000 per IP or API key each minute. Please inspect each endpoint in the [documentation](https://docs.bitvavo.com/) to see the weight. Failure to respect the rate limit will result in an IP or API key ban.
+Bitvavo uses a weight based rate limiting system, with an allowed limit of 1000 per IP or API key each minute. Please inspect each endpoint in the [Bitvavo API documentation](https://docs.bitvavo.com/) to see the weight. Failure to respect the rate limit will result in an IP or API key ban.
 Since the remaining limit is returned in the header on each REST request, the remaining limit is tracked locally and can be requested through:
 ```
 int remaining = bitvavo.getRemainingLimit();
@@ -301,7 +302,7 @@ System.out.println(bitvavo.book("BTC-EUR", new JSONObject()).toString(2));
 
 #### Get trades per market
 ```java
-// options: limit, start, end, tradeId
+// options: limit, start, end, tradeIdFrom, tradeIdTo
 JSONArray response = bitvavo.publicTrades("BTC-EUR", new JSONObject());
 for(int i = 0; i < response.length(); i ++) {
   System.out.println(response.getJSONObject(i).toString(2));
@@ -470,49 +471,53 @@ for(int i = 0; i < response.length(); i ++) {
 
 ```java
 {
-  "market": "BTC-EUR",
-  "ask": "2996",
-  "bid": "2995"
+  "market": "XTZ-EUR",
+  "bidSize": "174.027597",
+  "ask": "1.1215",
+  "bid": "1.1153",
+  "askSize": "137.777992"
 }
 {
-  "market": "ETH-EUR",
-  "ask": "90.391",
-  "bid": "90.343"
+  "market": "XVG-BTC",
+  "bidSize": "26051.54759452",
+  "ask": "0.00000045",
+  "bid": "0.00000044",
+  "askSize": "20695.30980296"
 }
 {
-  "market": "BCH-BTC",
-  "ask": "0.031569",
-  "bid": "0.031494"
+  "market": "XVG-EUR",
+  "bidSize": "481927.71084337",
+  "ask": "0.0042146",
+  "bid": "0.00415",
+  "askSize": "1636185.01588026"
 }
 {
-  "market": "BSV-BTC",
-  "ask": "0.018502",
-  "bid": "0.018475"
+  "market": "ZIL-BTC",
+  "bidSize": "170694.46012519",
+  "ask": "0.00000083",
+  "bid": "0.00000082",
+  "askSize": "171216.58399176"
 }
 {
-  "market": "ADA-BTC",
-  "ask": "0.000011019",
-  "bid": "0.000010985"
+  "market": "ZIL-EUR",
+  "bidSize": "320182.64363349",
+  "ask": "0.0077736",
+  "bid": "0.0076779",
+  "askSize": "157689.53870914"
 }
 {
-  "market": "AE-BTC",
-  "ask": "0.00010519",
-  "bid": "0.0001047"
+  "market": "ZRX-BTC",
+  "bidSize": "629.62976831",
+  "ask": "0.000016917",
+  "bid": "0.000016883",
+  "askSize": "1550.11187678"
 }
 {
-  "market": "AION-BTC",
-  "ask": "0.000035238",
-  "bid": "0.0000351"
-}
-{
-  "market": "LTC-BTC",
-  "ask": "0.0089099",
-  "bid": "0.008899"
-}
-{
-  "market": "ANT-BTC",
-  "ask": "0.00010395",
-  "bid": "0.000099748"
+  "market": "ZRX-EUR",
+  "bidSize": "773.69852304",
+  "ask": "0.15844",
+  "bid": "0.15808",
+  "askSize": "840.48655261"
 }
 ...
 ```
@@ -531,40 +536,60 @@ for(int i = 0; i < response.length(); i ++) {
 
 ```java
 {
-  "market": "AE-BTC",
-  "open": "0.00010658",
-  "high": "0.00010658",
-  "low": "0.00010658",
-  "last": "0.00010658",
-  "volume": "2",
-  "volumeQuote": "0.00021316"
+  "market": "XRP-EUR",
+  "volume": "621005.595523",
+  "high": "0.26643",
+  "last": "0.263",
+  "low": "0.26101",
+  "volumeQuote": "163867.92",
+  "bidSize": "4234.657481",
+  "ask": "0.26345",
+  "bid": "0.26331",
+  "open": "0.26603",
+  "askSize": "2354.543624",
+  "timestamp": 1565772150602
 }
 {
-  "market": "AION-BTC",
-  "open": "0.000034026",
-  "high": "0.000034026",
-  "low": "0.000034026",
-  "last": "0.000034026",
-  "volume": "2",
-  "volumeQuote": "0.00006805"
+  "market": "XTZ-EUR",
+  "volume": "33595.483347",
+  "high": "1.2142",
+  "last": "1.1153",
+  "low": "1.1102",
+  "volumeQuote": "38798.23",
+  "bidSize": "174.018456",
+  "ask": "1.1225",
+  "bid": "1.1154",
+  "open": "1.2142",
+  "askSize": "137.65525",
+  "timestamp": 1565772150835
 }
 {
-  "market": "ANT-BTC",
-  "open": "0.00010822",
-  "high": "0.00010822",
-  "low": "0.00010822",
-  "last": "0.00010822",
-  "volume": "2",
-  "volumeQuote": "0.00021644"
+  "market": "XVG-EUR",
+  "volume": "1145787.82971657",
+  "high": "0.0044139",
+  "last": "0.0041602",
+  "low": "0.0040849",
+  "volumeQuote": "4884.18",
+  "bidSize": "481927.71084337",
+  "ask": "0.0042196",
+  "bid": "0.00415",
+  "open": "0.0043222",
+  "askSize": "1634264.73386943",
+  "timestamp": 1565772150971
 }
 {
-  "market": "ARK-BTC",
-  "open": "0.00009327",
-  "high": "0.00009327",
-  "low": "0.00009327",
-  "last": "0.00009327",
-  "volume": "2",
-  "volumeQuote": "0.00018654"
+  "market": "ZIL-EUR",
+  "volume": "895543.29280087",
+  "high": "0.0084042",
+  "last": "0.0076923",
+  "low": "0.0076094",
+  "volumeQuote": "7010.22",
+  "bidSize": "319827.56419206",
+  "ask": "0.0077827",
+  "bid": "0.0076865",
+  "open": "0.0084042",
+  "askSize": "157689.53870914",
+  "timestamp": 1565772150805
 }
 ...
 ```
@@ -697,7 +722,7 @@ System.out.println(bitvavo.cancelOrder("BTC-EUR", "25f9459e-785a-4587-89fc-8ebf8
 #### Get orders
 Returns the same as get order, but can be used to return multiple orders at once.
 ```java
-// options: orderId, limit, start, end
+// options: limit, start, end, orderIdFrom, orderIdTo
 JSONArray response = bitvavo.getOrders("BTC-EUR", new JSONObject());
 for(int i = 0; i < response.length(); i ++) {
   System.out.println(response.getJSONObject(i).toString(2));
@@ -872,7 +897,7 @@ for(int i = 0; i < response.length(); i ++) {
 #### Get trades
 Returns all trades within a market for this account.
 ```java
-// options: limit, start, end, tradeId
+// options: limit, start, end, tradeIdFrom, tradeIdTo
 JSONArray response = bitvavo.trades("BTC-EUR", new JSONObject());
 for(int i = 0; i < response.length(); i ++) {
   System.out.println(response.getJSONObject(i).toString(2));
@@ -1116,7 +1141,7 @@ for(int i = 0; i < response.length(); i ++) {
 
 ## Websockets
 
-All requests which can be done through REST requests can also be performed over websockets. Bitvavo also provides five [subscriptions](https://github.com/bitvavo/java-bitvavo-api#subscriptions). If subscribed to these, updates specific for that type/market are pushed immediately.
+All requests which can be done through REST requests can also be performed over websockets. Bitvavo also provides six [subscriptions](https://github.com/bitvavo/java-bitvavo-api#subscriptions). If subscribed to these, updates specific for that type/market are pushed immediately.
 
 ### Getting started
 
@@ -1409,7 +1434,7 @@ ws.book("BTC-EUR", new JSONObject(), new WebsocketClientEndpoint.MessageHandler(
 
 #### Get trades per market
 ```java
-// options: limit, start, end, tradeId
+// options: limit, start, end, tradeIdFrom, tradeIdTo
 ws.publicTrades("BTC-EUR", new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
   public void handleMessage(JSONObject responseObject) {
     JSONArray response = responseObject.getJSONArray("response");
@@ -1594,49 +1619,53 @@ ws.tickerBook(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
 
 ```java
 {
-  "market": "BTC-EUR",
-  "ask": "2996",
-  "bid": "2995"
+  "market": "XTZ-EUR",
+  "bidSize": "174.027597",
+  "ask": "1.1215",
+  "bid": "1.1153",
+  "askSize": "137.777992"
 }
 {
-  "market": "ETH-EUR",
-  "ask": "90.391",
-  "bid": "90.343"
+  "market": "XVG-BTC",
+  "bidSize": "26051.54759452",
+  "ask": "0.00000045",
+  "bid": "0.00000044",
+  "askSize": "20695.30980296"
 }
 {
-  "market": "BCH-BTC",
-  "ask": "0.031569",
-  "bid": "0.031494"
+  "market": "XVG-EUR",
+  "bidSize": "481927.71084337",
+  "ask": "0.0042146",
+  "bid": "0.00415",
+  "askSize": "1636185.01588026"
 }
 {
-  "market": "BSV-BTC",
-  "ask": "0.018502",
-  "bid": "0.018475"
+  "market": "ZIL-BTC",
+  "bidSize": "170694.46012519",
+  "ask": "0.00000083",
+  "bid": "0.00000082",
+  "askSize": "171216.58399176"
 }
 {
-  "market": "ADA-BTC",
-  "ask": "0.000011019",
-  "bid": "0.000010985"
+  "market": "ZIL-EUR",
+  "bidSize": "320182.64363349",
+  "ask": "0.0077736",
+  "bid": "0.0076779",
+  "askSize": "157689.53870914"
 }
 {
-  "market": "AE-BTC",
-  "ask": "0.00010519",
-  "bid": "0.0001047"
+  "market": "ZRX-BTC",
+  "bidSize": "629.62976831",
+  "ask": "0.000016917",
+  "bid": "0.000016883",
+  "askSize": "1550.11187678"
 }
 {
-  "market": "AION-BTC",
-  "ask": "0.000035238",
-  "bid": "0.0000351"
-}
-{
-  "market": "LTC-BTC",
-  "ask": "0.0089099",
-  "bid": "0.008899"
-}
-{
-  "market": "ANT-BTC",
-  "ask": "0.00010395",
-  "bid": "0.000099748"
+  "market": "ZRX-EUR",
+  "bidSize": "773.69852304",
+  "ask": "0.15844",
+  "bid": "0.15808",
+  "askSize": "840.48655261"
 }
 ...
 ```
@@ -1659,40 +1688,60 @@ ws.ticker24h(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
 
 ```java
 {
-  "market": "AE-BTC",
-  "open": "0.00010658",
-  "high": "0.00010658",
-  "low": "0.00010658",
-  "last": "0.00010658",
-  "volume": "2",
-  "volumeQuote": "0.00021316"
+  "market": "XRP-EUR",
+  "volume": "621005.595523",
+  "high": "0.26643",
+  "last": "0.263",
+  "low": "0.26101",
+  "volumeQuote": "163867.92",
+  "bidSize": "4234.657481",
+  "ask": "0.26345",
+  "bid": "0.26331",
+  "open": "0.26603",
+  "askSize": "2354.543624",
+  "timestamp": 1565772150602
 }
 {
-  "market": "AION-BTC",
-  "open": "0.000034026",
-  "high": "0.000034026",
-  "low": "0.000034026",
-  "last": "0.000034026",
-  "volume": "2",
-  "volumeQuote": "0.00006805"
+  "market": "XTZ-EUR",
+  "volume": "33595.483347",
+  "high": "1.2142",
+  "last": "1.1153",
+  "low": "1.1102",
+  "volumeQuote": "38798.23",
+  "bidSize": "174.018456",
+  "ask": "1.1225",
+  "bid": "1.1154",
+  "open": "1.2142",
+  "askSize": "137.65525",
+  "timestamp": 1565772150835
 }
 {
-  "market": "ANT-BTC",
-  "open": "0.00010822",
-  "high": "0.00010822",
-  "low": "0.00010822",
-  "last": "0.00010822",
-  "volume": "2",
-  "volumeQuote": "0.00021644"
+  "market": "XVG-EUR",
+  "volume": "1145787.82971657",
+  "high": "0.0044139",
+  "last": "0.0041602",
+  "low": "0.0040849",
+  "volumeQuote": "4884.18",
+  "bidSize": "481927.71084337",
+  "ask": "0.0042196",
+  "bid": "0.00415",
+  "open": "0.0043222",
+  "askSize": "1634264.73386943",
+  "timestamp": 1565772150971
 }
 {
-  "market": "ARK-BTC",
-  "open": "0.00009327",
-  "high": "0.00009327",
-  "low": "0.00009327",
-  "last": "0.00009327",
-  "volume": "2",
-  "volumeQuote": "0.00018654"
+  "market": "ZIL-EUR",
+  "volume": "895543.29280087",
+  "high": "0.0084042",
+  "last": "0.0076923",
+  "low": "0.0076094",
+  "volumeQuote": "7010.22",
+  "bidSize": "319827.56419206",
+  "ask": "0.0077827",
+  "bid": "0.0076865",
+  "open": "0.0084042",
+  "askSize": "157689.53870914",
+  "timestamp": 1565772150805
 }
 ...
 ```
@@ -1841,7 +1890,7 @@ ws.cancelOrder("BTC-EUR", "afc383f8-36bb-4fa9-b511-2e35b51b1fa1", new WebsocketC
 #### Get orders
 Returns the same as get order, but can be used to return multiple orders at once.
 ```java
-// options: orderId, limit, start, end
+// options: limit, start, end, orderIdFrom, orderIdTo
 ws.getOrders("BTC-EUR", new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
   public void handleMessage(JSONObject responseObject) {
     JSONArray response = responseObject.getJSONArray("response");
@@ -2028,7 +2077,7 @@ ws.ordersOpen(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
 #### Get trades
 Returns all trades within a market for this account.
 ```java
-// options: limit, start, end, tradeId
+// options: limit, start, end, tradeIdFrom, tradeIdTo
 ws.trades("BTC-EUR", new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
   public void handleMessage(JSONObject responseObject) {
     JSONArray response = responseObject.getJSONArray("response");
@@ -2311,8 +2360,42 @@ ws.subscriptionTicker("BTC-EUR", new WebsocketClientEndpoint.MessageHandler() {
 ```java
 {
   "market": "BTC-EUR",
-  "bestAsk": "2994.6",
-  "event": "ticker"
+  "bestAsk": "9332.9",
+  "bestBidSize": "0.10654906",
+  "event": "ticker",
+  "bestBid": "9330.9",
+  "bestAskSize": "0.10937317",
+  "lastPrice": "9335"
+}
+```
+</details>
+
+#### Ticker 24 hour subscription
+Updated ticker24h objects are sent on this channel once per second. A ticker24h object is considered updated if one of the values besides timestamp has changed.
+```java
+ws.subscriptionTicker24h("BTC-EUR", new WebsocketClientEndpoint.MessageHandler() {
+  public void handleMessage(JSONObject response) {
+    System.out.println(response.toString(2));
+  }
+});
+```
+<details>
+ <summary>View Response</summary>
+
+```java
+{
+  "market": "BTC-EUR",
+  "volume": "299.98297637",
+  "high": "10111",
+  "last": "9327.9",
+  "low": "9291.5",
+  "volumeQuote": "2909883.39",
+  "bidSize": "0.10663934",
+  "ask": "9323.1",
+  "bid": "9323",
+  "open": "10111",
+  "askSize": "0.10948854",
+  "timestamp": 1565773967750
 }
 ```
 </details>

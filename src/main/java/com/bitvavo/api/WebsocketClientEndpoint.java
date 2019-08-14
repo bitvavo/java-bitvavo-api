@@ -51,6 +51,7 @@ public class WebsocketClientEndpoint {
     HashMap<String, HashMap<String, MessageHandler>> subscriptionCandlesHandlerMap;
     HashMap<String, MessageHandler> subscriptionAccountHandlerMap;
     HashMap<String, MessageHandler> subscriptionTickerHandlerMap;
+    HashMap<String, MessageHandler> subscriptionTicker24hHandlerMap;
     HashMap<String, MessageHandler> subscriptionTradesHandlerMap;
     HashMap<String, MessageHandler> subscriptionBookUpdateHandlerMap;
     HashMap<String, BookHandler> subscriptionBookHandlerMap;
@@ -117,6 +118,13 @@ public class WebsocketClientEndpoint {
                 this.sendMessage(bitvavo.optionsSubscriptionTicker.get(market).toString());
             }
         }
+        if(bitvavo.activatedSubscriptionTicker24h) {
+            Iterator<String> markets = bitvavo.optionsSubscriptionTicker24h.keys();
+            while(markets.hasNext()) {
+                String market = markets.next();
+                this.sendMessage(bitvavo.optionsSubscriptionTicker24h.get(market).toString());
+            }
+        }
         // Account uses a threaded function, since we need a response on authenticate before we can send.
         if(bitvavo.activatedSubscriptionAccount) {
             WebsocketSendThread websocketSendThread = new WebsocketSendThread(bitvavo.optionsSubscriptionAccount, bitvavo, this);
@@ -171,6 +179,7 @@ public class WebsocketClientEndpoint {
             newCE.keepBookCopy = true;
         }
         newCE.copySubscriptionTickerHandler(oldCE.subscriptionTickerHandlerMap);
+        newCE.copySubscriptionTicker24hHandler(oldCE.subscriptionTicker24hHandlerMap);
         newCE.copySubscriptionAccountHandler(oldCE.subscriptionAccountHandlerMap);
         newCE.copySubscriptionBookUpdateHandler(oldCE.subscriptionBookUpdateHandlerMap);
         newCE.copySubscriptionCandlesHandler(oldCE.subscriptionCandlesHandlerMap);
@@ -351,6 +360,18 @@ public class WebsocketClientEndpoint {
                 if (this.subscriptionTickerHandlerMap != null) {
                     if(this.subscriptionTickerHandlerMap.get(market) != null) {
                         this.subscriptionTickerHandlerMap.get(market).handleMessage(response);
+                    }
+                }
+            }
+            else if (response.getString("event").equals("ticker24h")) {
+                JSONArray data = response.getJSONArray("data");
+                if (this.subscriptionTicker24hHandlerMap != null) {
+                    for (int i = 0; i < data.length(); i++) {
+                        JSONObject ticker = data.getJSONObject(i);
+                        market = ticker.getString("market");
+                        if (this.subscriptionTicker24hHandlerMap.get(market) != null) {
+                            this.subscriptionTicker24hHandlerMap.get(market).handleMessage(ticker);
+                        }
                     }
                 }
             }
@@ -647,6 +668,17 @@ public class WebsocketClientEndpoint {
 
     public void copySubscriptionTickerHandler(HashMap<String, MessageHandler> map) {
         this.subscriptionTickerHandlerMap = map;
+    }
+
+    public void addSubscriptionTicker24hHandler(String market, MessageHandler msgHandler) {
+        if(this.subscriptionTicker24hHandlerMap == null) {
+            this.subscriptionTicker24hHandlerMap = new HashMap<String, MessageHandler>();
+        }
+        this.subscriptionTicker24hHandlerMap.put(market, msgHandler);
+    }
+
+    public void copySubscriptionTicker24hHandler(HashMap<String, MessageHandler> map) {
+        this.subscriptionTicker24hHandlerMap = map;
     }
 
     public void addSubscriptionAccountHandler(String market, MessageHandler msgHandler) {

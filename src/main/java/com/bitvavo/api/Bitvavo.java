@@ -23,12 +23,14 @@ public class Bitvavo {
   Websocket websocketObject;
   Map<String, Object> book;
   boolean activatedSubscriptionTicker;
+  boolean activatedSubscriptionTicker24h;
   boolean activatedSubscriptionAccount;
   boolean activatedSubscriptionCandles;
   boolean activatedSubscriptionTrades;
   boolean activatedSubscriptionBookUpdate;
   boolean activatedSubscriptionBook;
   JSONObject optionsSubscriptionTicker;
+  JSONObject optionsSubscriptionTicker24h;
   JSONObject optionsSubscriptionAccount;
   JSONObject optionsSubscriptionCandles;
   JSONObject optionsSubscriptionTrades;
@@ -418,7 +420,7 @@ public class Bitvavo {
   /**
    * Returns the trades for a specific market
    * @param market Specifies the market for which trades should be returned
-   * @param options optional parameters: limit, start, end, tradeId
+   * @param options optional parameters: limit, start, end, tradeIdFrom, tradeIdTo
    * @return JSONArray response, iterate over array to get individual trades response.getJSONObject(index)
    */
   public JSONArray publicTrades(String market, JSONObject options) {
@@ -529,7 +531,7 @@ public class Bitvavo {
   /**
    * Returns multiple orders for a specific market
    * @param market the market for which orders should be returned
-   * @param options optional parameters: orderId, limit, start, end
+   * @param options optional parameters: limit, start, end, orderIdFrom, orderIdTo
    * @return JSONArray response, get individual orders by iterating over array: response.getJSONObject(index)
    */
   public JSONArray getOrders(String market, JSONObject options) {
@@ -561,7 +563,7 @@ public class Bitvavo {
   /**
    * Returns all trades for a specific market
    * @param market the market for which trades should be returned
-   * @param options optional parameters: limit, start, end, tradeId
+   * @param options optional parameters: limit, start, end, tradeIdFrom, tradeIdTo
    * @return JSONArray trades, get individual trades by iterating over array: response.getJSONObject(index)
    */
   public JSONArray trades(String market, JSONObject options) {
@@ -751,7 +753,7 @@ public class Bitvavo {
    * Returns the trades per market.
    *
    * @param market market for which the trades should be returned.
-   * @param options optional parameters: limit, start, end, tradeId
+   * @param options optional parameters: limit, start, end, tradeIdFrom, tradeIdTo
    * @param msgHandler callback
    * @return JSONObject response, get trades through response.getJSONArray("response") and iterate over array to get objects array.getJSONObject(index)
    */
@@ -893,7 +895,7 @@ public class Bitvavo {
    * Returns multiple orders at once
    *
    * @param market market on which the orders should be returned
-   * @param options optional parameters: orderId, limit, start, end
+   * @param options optional parameters: limit, start, end, orderIdFrom, orderIdTo
    * @param msgHandler callback
    * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get order objects array.getJSONObject(index)
    */
@@ -934,7 +936,7 @@ public class Bitvavo {
    * Returns all trades within a market
    *
    * @param market for which market should the trades be returned
-   * @param options optional parameters: limit, start, end, tradeId
+   * @param options optional parameters: limit, start, end, tradeIdFrom, tradeIdTo
    * @param msgHandler callback
    * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get trades objects array.getJSONObject(index)
    */
@@ -1037,6 +1039,29 @@ public class Bitvavo {
         optionsSubscriptionTicker = new JSONObject();
       }
       optionsSubscriptionTicker.put(market, options);
+      doSendPublic(options);
+    }
+
+    /**
+   * Pushes an update every time the 24 hour ticker for a market is updated
+   *
+   * @param market market for which tickers should be returned
+   * @param msgHandler callback, will be overwritten when subscriptionTicker() is called with the same market parameter.
+   * @return JSONObject ticker, get individual fields through ticker.getString(<key>)
+   */
+    public void subscriptionTicker24h(String market, WebsocketClientEndpoint.MessageHandler msgHandler) {
+      ws.addSubscriptionTicker24hHandler(market, msgHandler);
+      JSONObject options = new JSONObject();
+      JSONObject subOptions = new JSONObject();
+      subOptions.put("name", "ticker24h");
+      subOptions.put("markets", new String[] {market});
+      options.put("action", "subscribe");
+      options.put("channels", new JSONObject[] {subOptions});
+      activatedSubscriptionTicker24h = true;
+      if(optionsSubscriptionTicker24h == null) {
+        optionsSubscriptionTicker24h = new JSONObject();
+      }
+      optionsSubscriptionTicker24h.put(market, options);
       doSendPublic(options);
     }
 

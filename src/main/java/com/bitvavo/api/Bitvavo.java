@@ -442,13 +442,21 @@ public class Bitvavo {
   }
 
   /**
-   * Returns the ticker price
-   * @param options optional parameters: market
+   * Returns a single ticker price
+   * @param options JSONObject with the 'market' filter parameter
+   * @return JSONObject response
+   */
+  public JSONObject tickerPrice(JSONObject options) {
+    String postfix = createPostfix(options);
+    return publicRequest(base + "/ticker/price" + postfix, "GET", new JSONObject());
+  }
+
+  /**
+   * Returns the ticker prices
    * @return JSONArray response, get individual prices by iterating over array: response.getJSONObject(index)
    */
-  public JSONArray tickerPrice(JSONObject options) {
-    String postfix = createPostfix(options);
-    return publicRequestArray((base + "/ticker/price" + postfix), "GET", new JSONObject());
+  public JSONArray tickerPrices() {
+    return publicRequestArray(base + "/ticker/price", "GET", new JSONObject());
   }
 
   /**

@@ -406,10 +406,26 @@ for(int i = 0; i < candles.length(); i ++) {
 ```
 </details>
 
-#### Get price ticker
+#### Get single price ticker
 ```java
-// options: market
-JSONArray response = bitvavo.tickerPrice(new JSONObject());
+// option market
+JSONObject response = bitvavo.tickerPrice(new JSONObject("{ market: BTC-EUR }"));
+System.out.println(response.toString(2));
+```
+<details>
+ <summary>View Response</summary>
+
+```java
+{
+  "market": "BTC-EUR",
+  "price": "6812.7"
+}
+```
+</details>
+
+#### Get all price tickers
+```java
+JSONArray response = bitvavo.tickerPrices();
 for(int i = 0; i < response.length(); i ++) {
   System.out.println(response.getJSONObject(i).toString(2));
 }

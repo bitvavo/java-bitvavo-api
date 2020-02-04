@@ -18,6 +18,8 @@ class example{
     Bitvavo bitvavo = new Bitvavo(new JSONObject("{" + 
         "APIKEY: '<APIKEY>', " +
         "APISECRET: '<APISECRET>', " +
+        "RESTURL: 'https://api.bitvavo.com/v2'," +
+        "WSURL: 'wss://ws.bitvavo.com/v2/'," +
         "ACCESSWINDOW: 10000, " +
         "DEBUGGING: false }"));
 
@@ -346,5 +348,8 @@ class example{
     //     System.out.println(book);
     //   }
     // });
+
+    // The following function can be used to close the socket, callbacks will no longer be called.
+    // ws.close()
   }
 }

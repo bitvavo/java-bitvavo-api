@@ -21,6 +21,7 @@ public class WebsocketClientEndpoint {
     int reconnectTimer;
     Bitvavo bitvavo;
     Session userSession = null;
+    boolean restartWebsocket = true;
     boolean keepBookCopy;
     ArrayList<String> nonceArray;
     private MessageHandler messageHandler;
@@ -88,6 +89,19 @@ public class WebsocketClientEndpoint {
         catch (Exception error) {
             bitvavo.errorToConsole("unexpected exception caught");
             throw new RuntimeException(error);
+        }
+    }
+
+    public void closeSocket() {
+        try {
+            if (this.userSession != null) {
+                this.restartWebsocket = false;
+                this.userSession.close();
+                System.out.println(bitvavo.keepAliveThread);
+                bitvavo.keepAliveThread.interrupt();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -191,10 +205,10 @@ public class WebsocketClientEndpoint {
     public void onClose(Session userSession, CloseReason reason) throws IOException {
         bitvavo.debugToConsole("closing websocket " + reason);
         this.userSession = null;
-        if(bitvavo.getRemainingLimit() > 0) {
+        if(bitvavo.getRemainingLimit() > 0 && this.restartWebsocket) {
             try {
                 bitvavo.authenticated = false;
-                WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(new URI("wss://api.bitvavo.com/v2/"), bitvavo);
+                WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(new URI(bitvavo.wsUrl), bitvavo);
                 copyHandlers(bitvavo.ws, clientEndPoint);
                 clientEndPoint.addAuthenticateHandler(new WebsocketClientEndpoint.MessageHandler() {
                     public void handleMessage(JSONObject response) {
@@ -215,7 +229,11 @@ public class WebsocketClientEndpoint {
                 bitvavo.errorToConsole("We caught exception in reconnecting!" + ex);
             }
         } else {
-            bitvavo.debugToConsole("The websocket has been closed because your rate limit was reached, please wait till the ban is lifted and try again.");
+            if (this.restartWebsocket) {
+                bitvavo.debugToConsole("The websocket has been closed because your rate limit was reached, please wait till the ban is lifted and try again.");
+            } else {
+                bitvavo.debugToConsole("The websocket has been closed by the user.");
+            }
         }
     }
 

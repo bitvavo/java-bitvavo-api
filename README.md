@@ -1,5 +1,6 @@
 <p align="center">
-  <a href="https://bitvavo.com"><img src="https://bitvavo.com/media/images/logo/bitvavoGeneral.svg" width="600" title="Bitvavo Logo"></a>
+  <br>
+  <a href="https://bitvavo.com"><img src="https://bitvavo.com/assets/static/ext/logo-shape.svg" width="100" title="Bitvavo Logo"></a>
 </p>
 
 # Java Bitvavo Api
@@ -194,6 +195,9 @@ for(int i = 0; i < response.length(); i ++) {
   "depositStatus": "OK",
   "depositFee": "0",
   "withdrawalStatus": "OK",
+  "networks": [
+    "Mainnet"
+  ],
   "message": ""
 }
 {
@@ -206,6 +210,9 @@ for(int i = 0; i < response.length(); i ++) {
   "depositStatus": "OK",
   "depositFee": "0",
   "withdrawalStatus": "OK",
+  "networks": [
+    "Mainnet"
+  ],
   "message": ""
 }
 {
@@ -218,6 +225,9 @@ for(int i = 0; i < response.length(); i ++) {
   "depositStatus": "",
   "depositFee": "0",
   "withdrawalStatus": "",
+  "networks": [
+    "Mainnet"
+  ],
   "message": ""
 }
 {
@@ -230,6 +240,9 @@ for(int i = 0; i < response.length(); i ++) {
   "depositStatus": "OK",
   "depositFee": "0",
   "withdrawalStatus": "OK",
+  "networks": [
+    "Mainnet"
+  ],
   "message": ""
 }
 ...
@@ -1324,6 +1337,9 @@ ws.assets(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
   "depositStatus": "OK",
   "depositFee": "0",
   "withdrawalStatus": "OK",
+  "networks": [
+    "Mainnet"
+  ],
   "message": ""
 }
 {
@@ -1336,6 +1352,9 @@ ws.assets(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
   "depositStatus": "OK",
   "depositFee": "0",
   "withdrawalStatus": "OK",
+  "networks": [
+    "Mainnet"
+  ],
   "message": ""
 }
 {
@@ -1348,6 +1367,9 @@ ws.assets(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
   "depositStatus": "",
   "depositFee": "0",
   "withdrawalStatus": "",
+  "networks": [
+    "Mainnet"
+  ],
   "message": ""
 }
 {
@@ -1360,6 +1382,9 @@ ws.assets(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
   "depositStatus": "OK",
   "depositFee": "0",
   "withdrawalStatus": "OK",
+  "networks": [
+    "Mainnet"
+  ],
   "message": ""
 }
 ...

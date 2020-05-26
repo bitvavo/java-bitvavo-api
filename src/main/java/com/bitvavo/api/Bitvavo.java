@@ -12,6 +12,8 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.binary.Hex;
 import java.util.concurrent.TimeUnit;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 
 public class Bitvavo {
   String apiKey;
@@ -124,7 +126,7 @@ public class Bitvavo {
     try {
       String result = String.valueOf(timestamp) + method + "/v2" + urlEndpoint;
       if(body.length() != 0) {
-        result = result + body.toString();
+        result = result + bodyToJsonString(body);
       }
       Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
       SecretKeySpec secret_key = new SecretKeySpec(this.apiSecret.getBytes("UTF-8"), "HmacSHA256");
@@ -135,6 +137,36 @@ public class Bitvavo {
       errorToConsole("Caught exception in createSignature " + ex);
       return "";
     }
+  }
+
+  public String bodyToJsonString(JSONObject body) {
+    Iterator<String> keys = body.keys();
+    DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+    df.setMaximumFractionDigits(340);
+    String jsonString = "{";
+    Boolean first = true;
+
+    while(keys.hasNext()) {
+      String key = keys.next();
+      System.out.println(body.get(key).getClass().getName());
+      if (!first) {
+        jsonString = jsonString + ",";
+      } else {
+        first = false;
+      }
+
+      if ((body.get(key) instanceof Double) || (body.get(key) instanceof Float)) {
+        jsonString = jsonString + "\"" + key + "\":" + df.format(body.get(key));
+      } else if ((body.get(key) instanceof Integer) || (body.get(key) instanceof Long)) {
+        jsonString = jsonString + "\"" + key + "\":" + body.get(key).toString();
+      } else if (body.get(key) instanceof Boolean) {
+        jsonString = jsonString + "\"" + key + "\":" + body.get(key);
+      } else {
+        jsonString = jsonString + "\"" + key + "\":\"" + body.get(key).toString() + "\"";
+      }
+    }
+    jsonString = jsonString + "}";
+    return jsonString;
   }
 
   public void debugToConsole(String message) {

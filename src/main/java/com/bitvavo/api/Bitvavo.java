@@ -148,7 +148,6 @@ public class Bitvavo {
 
     while(keys.hasNext()) {
       String key = keys.next();
-      System.out.println(body.get(key).getClass().getName());
       if (!first) {
         jsonString = jsonString + ",";
       } else {

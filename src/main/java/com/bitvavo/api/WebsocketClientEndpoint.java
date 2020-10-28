@@ -42,6 +42,7 @@ public class WebsocketClientEndpoint {
     private MessageHandler getOrdersHandler;
     private MessageHandler getOrdersOpenHandler;
     private MessageHandler getTradesHandler;
+    private MessageHandler getAccountHandler;
     private MessageHandler balanceHandler;
     private MessageHandler depositAssetsHandler;
     private MessageHandler withdrawAssetsHandler;
@@ -550,6 +551,11 @@ public class WebsocketClientEndpoint {
                     this.getTradesHandler.handleMessage(response);
                 }
             }
+            else if(response.getString("action").equals("privateGetAccount")) {
+                if (this.getAccountHandler != null) {
+                    this.getAccountHandler.handleMessage(response);
+                }
+            }
             else if(response.getString("action").equals("privateGetBalance")) {
                 if(this.balanceHandler != null) {
                     this.balanceHandler.handleMessage(response);
@@ -655,6 +661,10 @@ public class WebsocketClientEndpoint {
 
     public void addGetTradesHandler(MessageHandler msgHandler) {
         this.getTradesHandler = msgHandler;
+    }
+
+    public void addAccountHandler(MessageHandler msgHandler) {
+        this.getAccountHandler = msgHandler;
     }
 
     public void addBalanceHandler(MessageHandler msgHandler) {

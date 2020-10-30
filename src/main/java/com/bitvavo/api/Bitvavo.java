@@ -553,7 +553,10 @@ public class Bitvavo {
    * @param market The market for which the order should be created
    * @param side is this a buy or sell order
    * @param orderType is this a limit or market order
-   * @param body optional body parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection), both: timeInForce, selfTradePrevention, responseRequired
+   * @param body optional body parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection)
+   *                                       stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+   *                                       stopLossLimit/takeProfitLimit:(amount, price, postOnly, triggerType, triggerReference, triggerAmount)
+   *                                       all orderTypes: timeInForce, selfTradePrevention, responseRequired
    * @return JSONObject response, get status of the order through response.getString("status")
    */
   public JSONObject placeOrder(String market, String side, String orderType, JSONObject body) {
@@ -582,7 +585,8 @@ public class Bitvavo {
    * @param market the market the order resides on
    * @param orderId the id of the order which should be updated
    * @param body optional body parameters: limit:(amount, amountRemaining, price, timeInForce, selfTradePrevention, postOnly)
-   *             (set at least 1) (responseRequired can be set as well, but does not update anything)
+   *                           untriggered stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+   *                                       stopLossLimit/takeProfitLimit: (amount, price, postOnly, triggerType, triggerReference, triggerAmount)
    * @return JSONObject response, get status of the order through response.getString("status")
    */
   public JSONObject updateOrder(String market, String orderId, JSONObject body) {
@@ -647,6 +651,14 @@ public class Bitvavo {
     options.put("market", market);
     String postfix = createPostfix(options);
     return privateRequestArray("/trades", postfix, "GET", new JSONObject());
+  }
+
+  /**
+   * Return the fee tier for an account
+   * @return JSONObject response, get taker fee through: response.getJSONObject("fees").getString("taker")
+   */
+  public JSONObject account() {
+    return privateRequest("/account", "", "GET", new JSONObject());
   }
 
   /**
@@ -908,7 +920,10 @@ public class Bitvavo {
    * @param market market on which the order should be created
    * @param side is this a sell or buy order
    * @param orderType is this a limit or market order
-   * @param body optional body parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection), both: timeInForce, selfTradePrevention, responseRequired
+   * @param body optional body parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection)
+   *                                       stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+   *                                       stopLossLimit/takeProfitLimit:(amount, price, postOnly, triggerType, triggerReference, triggerAmount)
+   *                                       all orderTypes: timeInForce, selfTradePrevention, responseRequired
    * @param msgHandler callback
    * @return JSONObject response, get order object through response.getJSONObject("response")
    */
@@ -944,7 +959,8 @@ public class Bitvavo {
    * @param market market on which the order should be updated
    * @param orderId the order which should be updated
    * @param body optional body parameters: limit:(amount, amountRemaining, price, timeInForce, selfTradePrevention, postOnly)
-   *             (set at least 1) (responseRequired can be set as well, but does not update anything)
+   *                           untriggered stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+   *                                       stopLossLimit/takeProfitLimit: (amount, price, postOnly, triggerType, triggerReference, triggerAmount)
    * @param msgHandler callback
    * @return JSONObject response, get order object through response.getJSONObject("response")
    */
@@ -1026,6 +1042,18 @@ public class Bitvavo {
       ws.addGetTradesHandler(msgHandler);
       options.put("action", "privateGetTrades");
       options.put("market", market);
+      doSendPrivate(options);
+    }
+
+  /**
+   * Returns the fee tier for an account
+   *
+   * @param msgHandler callback
+   * @return JSONObject response, get taker fee through response.getJSONObject("response").getJSONObject("fees").getString("taker")
+   */
+    public void account(WebsocketClientEndpoint.MessageHandler msgHandler) {
+      ws.addAccountHandler(msgHandler);
+      JSONObject options = new JSONObject("{ action: privateGetAccount }");
       doSendPrivate(options);
     }
 

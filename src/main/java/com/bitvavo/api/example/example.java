@@ -31,10 +31,7 @@ class example{
     JSONArray response;
 
     int remaining = bitvavo.getRemainingLimit();
-    if (remaining > 0) {
-      System.out.println("remaining limit is " + remaining);
-      System.out.println(bitvavo.time().toString(2));
-    }
+    System.out.println("remaining limit is " + remaining);
 
     // response = bitvavo.markets(new JSONObject());
     // for(int i = 0; i < response.length(); i ++) {
@@ -74,6 +71,8 @@ class example{
     // }
 
     // System.out.println(bitvavo.placeOrder("BTC-EUR", "sell", "limit", new JSONObject("{ amount: 0.1, price: 4000 }")).toString(2));
+
+    // System.out.println(bitvavo.placeOrder("BTC-EUR", "sell", "stopLoss", new JSONObject("{ amount: 0.1, triggerType: price, triggerReference: lastTrade, triggerAmount: 5000 }")).toString(2));
     
     // System.out.println(bitvavo.getOrder("BTC-EUR", "afa9da1c-edb9-4245-9271-3549147845a1").toString(2));
 
@@ -100,6 +99,8 @@ class example{
     // for(int i = 0; i < response.length(); i ++) {
     //   System.out.println(response.getJSONObject(i).toString(2));
     // }
+
+    // System.out.println(bitvavo.account().toString(2));
 
     // response = bitvavo.balance(new JSONObject());
     // for(int i = 0; i < response.length(); i ++) {
@@ -262,6 +263,13 @@ class example{
     //     for (int i = 0; i < response.length(); i ++) {
     //       System.out.println(response.getJSONObject(i).toString(2));
     //     }
+    //   }
+    // });
+
+    // ws.account(new WebsocketClientEndpoint.MessageHandler() {
+    //   public void handleMessage(JSONObject responseObject) {
+    //     JSONObject response = responseObject.getJSONObject("response");
+    //     System.out.println(response.toString(2));
     //   }
     // });
 

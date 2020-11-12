@@ -27,6 +27,7 @@ This is the Java wrapper for the Bitvavo API. This project can be used to build 
   * Cancel Orders       [REST](https://github.com/bitvavo/java-bitvavo-api#cancel-orders) [Websocket](https://github.com/bitvavo/java-bitvavo-api#cancel-orders-1)
   * Orders Open         [REST](https://github.com/bitvavo/java-bitvavo-api#get-orders-open) [Websocket](https://github.com/bitvavo/java-bitvavo-api#get-orders-open-1)
   * Trades              [REST](https://github.com/bitvavo/java-bitvavo-api#get-trades) [Websocket](https://github.com/bitvavo/java-bitvavo-api#get-trades-1)
+  * Account             [REST](https://github.com/bitvavo/java-bitvavo-api#get-account) [Websocket](https://github.com/bitvavo/java-bitvavo-api#get-account-1)
   * Balance             [REST](https://github.com/bitvavo/java-bitvavo-api#get-balance) [Websocket](https://github.com/bitvavo/java-bitvavo-api#get-balance-1)
   * Deposit Assets     [REST](https://github.com/bitvavo/java-bitvavo-api#deposit-assets) [Websocket](https://github.com/bitvavo/java-bitvavo-api#deposit-assets-1)
   * Withdraw Assets   [REST](https://github.com/bitvavo/java-bitvavo-api#withdraw-assets) [Websocket](https://github.com/bitvavo/java-bitvavo-api#withdraw-assets-1)
@@ -616,7 +617,9 @@ for(int i = 0; i < response.length(); i ++) {
 When placing an order, make sure that the correct optional parameters are set. For a limit order it is required to set both the amount and price. A market order is valid if either the amount or the amountQuote has been set.
 ```java
 // optional parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection),
-// both: timeInForce, selfTradePrevention, responseRequired
+//                      stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+//                      stopLossLimit/takeProfitLimit:(amount, price, postOnly, triggerType, triggerReference, triggerAmount)
+//                      all orderTypes: timeInForce, selfTradePrevention, responseRequired
 System.out.println(bitvavo.placeOrder("BTC-EUR", "sell", "limit",
                                       new JSONObject("{ amount: 0.1, price: 4000 }")).toString(2));
 ```
@@ -654,7 +657,8 @@ System.out.println(bitvavo.placeOrder("BTC-EUR", "sell", "limit",
 When updating an order make sure that at least one of the optional parameters has been set. Otherwise nothing can be updated.
 ```java
 // Optional parameters: limit:(amount, amountRemaining, price, timeInForce, selfTradePrevention, postOnly)
-// (set at least 1) (responseRequired can be set as well, but does not update anything)
+//          untriggered stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+//                      stopLossLimit/takeProfitLimit: (amount, price, postOnly, triggerType, triggerReference, triggerAmount)
 System.out.println(bitvavo.updateOrder("BTC-EUR", "81080b09-2415-44e3-b61c-50ffca4a0221",
                                         new JSONObject("{ amount: 0.2 }")));
 ```
@@ -971,6 +975,24 @@ for(int i = 0; i < response.length(); i ++) {
   "timestamp": 1548690809594
 }
 ...
+```
+</details>
+
+#### Get account
+```java
+System.out.println(bitvavo.account().toString(2));
+```
+<details>
+ <summary>View Response</summary>
+
+```java
+{
+  "fees": {
+    "taker": "0.0025",
+    "maker": "0.0015",
+    "volume": "100"
+  }
+}
 ```
 </details>
 
@@ -1780,7 +1802,9 @@ ws.ticker24h(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
 When placing an order, make sure that the correct optional parameters are set. For a limit order it is required to set both the amount and price. A market order is valid if either the amount or the amountQuote has been set.
 ```java
 // optional parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection),
-// both: timeInForce, selfTradePrevention, responseRequired
+//                      stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+//                      stopLossLimit/takeProfitLimit:(amount, price, postOnly, triggerType, triggerReference, triggerAmount)
+//                      all orderTypes: timeInForce, selfTradePrevention, responseRequired
 ws.placeOrder("BTC-EUR", "sell", "limit", new JSONObject("{ amount: 0.1, price: 4000 }"),
   new WebsocketClientEndpoint.MessageHandler() {
     public void handleMessage(JSONObject responseObject) {
@@ -1822,7 +1846,8 @@ ws.placeOrder("BTC-EUR", "sell", "limit", new JSONObject("{ amount: 0.1, price: 
 When updating an order make sure that at least one of the optional parameters has been set. Otherwise nothing can be updated.
 ```java
 // Optional parameters: limit:(amount, amountRemaining, price, timeInForce, selfTradePrevention, postOnly)
-// (set at least 1) (responseRequired can be set as well, but does not update anything)
+//          untriggered stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+//                      stopLossLimit/takeProfitLimit: (amount, price, postOnly, triggerType, triggerReference, triggerAmount)
 ws.updateOrder("BTC-EUR", "81080b09-2415-44e3-b61c-50ffca4a0221", new JSONObject("{ amount: 0.2 }"),
   new WebsocketClientEndpoint.MessageHandler() {
     public void handleMessage(JSONObject responseObject) {
@@ -2167,6 +2192,29 @@ ws.trades("BTC-EUR", new JSONObject(), new WebsocketClientEndpoint.MessageHandle
   "timestamp": 1548690809594
 }
 ...
+```
+</details>
+
+#### Get account
+```java
+ws.account(new WebsocketClientEndpoint.MessageHandler() {
+  public void handleMessage(JSONObject responseObject) {
+    JSONObject response = responseObject.getJSONObject("response");
+    System.out.println(response.toString(2));
+  }
+});
+```
+<details>
+ <summary>View Response</summary>
+
+```java
+{
+  "fees": {
+    "taker": "0.0025",
+    "maker": "0.0015",
+    "volume": "100"
+  }
+}
 ```
 </details>
 

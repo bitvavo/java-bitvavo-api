@@ -1,19 +1,24 @@
 package com.bitvavo.api;
 
-import java.net.*;
-import javax.net.ssl.*;
-import java.io.*;
-import org.json.*;
-import java.util.*;
-import java.util.Calendar;
-import java.text.SimpleDateFormat;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import org.apache.commons.codec.binary.Hex;
+import javax.net.ssl.HttpsURLConnection;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.StringWriter;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
+import java.util.stream.Collectors;
 
 public class Bitvavo {
   String apiKey = "";
@@ -75,13 +80,8 @@ public class Bitvavo {
   }
 
   private String createPostfix(JSONObject options) {
-    ArrayList<String> array = new ArrayList<>();
-    Iterator<?> keys = options.keys();
-    while(keys.hasNext()) {
-      String key = (String) keys.next();
-      array.add(key + "=" + options.get(key).toString());
-    }
-    String params = String.join("&", array);
+    String params = options.keySet().stream().map(key -> key + "=" + options.get(key).toString())
+            .collect(Collectors.joining("&"));
     if(options.length() > 0) {
       params = "?" + params;
     }
@@ -94,9 +94,9 @@ public class Bitvavo {
       return "";
     }
     try {
-      String result = String.valueOf(timestamp) + method + "/v2" + urlEndpoint;
+      String result = timestamp + method + "/v2" + urlEndpoint;
       if(body.length() != 0) {
-        result = result + bodyToJsonString(body);
+        result = result + body.toString();
       }
       Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
       SecretKeySpec secret_key = new SecretKeySpec(this.apiSecret.getBytes("UTF-8"), "HmacSHA256");
@@ -109,39 +109,10 @@ public class Bitvavo {
     }
   }
 
-  public String bodyToJsonString(JSONObject body) {
-    Iterator<String> keys = body.keys();
-    DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
-    df.setMaximumFractionDigits(340);
-    String jsonString = "{";
-    Boolean first = true;
-
-    while(keys.hasNext()) {
-      String key = keys.next();
-      if (!first) {
-        jsonString = jsonString + ",";
-      } else {
-        first = false;
-      }
-
-      if ((body.get(key) instanceof Double) || (body.get(key) instanceof Float)) {
-        jsonString = jsonString + "\"" + key + "\":" + df.format(body.get(key));
-      } else if ((body.get(key) instanceof Integer) || (body.get(key) instanceof Long)) {
-        jsonString = jsonString + "\"" + key + "\":" + body.get(key).toString();
-      } else if (body.get(key) instanceof Boolean) {
-        jsonString = jsonString + "\"" + key + "\":" + body.get(key);
-      } else {
-        jsonString = jsonString + "\"" + key + "\":\"" + body.get(key).toString() + "\"";
-      }
-    }
-    jsonString = jsonString + "}";
-    return jsonString;
-  }
-
   public void debugToConsole(String message) {
-    Calendar cal = Calendar.getInstance();
-    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
     if(this.debugging) {
+      Calendar cal = Calendar.getInstance();
+      SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
       System.out.println(sdf.format(cal.getTime()) + " DEBUG: " + message);
     }
   }
@@ -236,7 +207,7 @@ public class Bitvavo {
 
 
       int responseCode = httpsCon.getResponseCode();
-      
+
       InputStream inputStream;
       if(responseCode == 200) {
         inputStream = httpsCon.getInputStream();
@@ -282,7 +253,7 @@ public class Bitvavo {
       }
 
       int responseCode = httpsCon.getResponseCode();
-      
+
       InputStream inputStream;
       if(responseCode == 200) {
         inputStream = httpsCon.getInputStream();
@@ -498,7 +469,7 @@ public class Bitvavo {
       returnArray.put(publicRequest((this.restUrl + "/ticker/book" + postfix), "GET", new JSONObject()));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/ticker/book" + postfix), "GET", new JSONObject()); 
+      return publicRequestArray((this.restUrl + "/ticker/book" + postfix), "GET", new JSONObject());
     }
   }
 
@@ -514,7 +485,7 @@ public class Bitvavo {
       returnArray.put(publicRequest((this.restUrl + "/ticker/24h" + postfix), "GET", new JSONObject()));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/ticker/24h" + postfix), "GET", new JSONObject()); 
+      return publicRequestArray((this.restUrl + "/ticker/24h" + postfix), "GET", new JSONObject());
     }
   }
 
@@ -763,49 +734,49 @@ public class Bitvavo {
     }
 
     /**
-   * Returns the current time in unix timestamp (milliseconds since 1 jan 1970).
-   *@param msgHandler callback
-   * @return JSONObject response, get time through response.getJSONObject("response").getLong("time")
-   */
+     * Returns the current time in unix timestamp (milliseconds since 1 jan 1970).
+     * @param msgHandler callback
+     * @return JSONObject response, get time through response.getJSONObject("response").getLong("time")
+     */
     public void time(WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addTimeHandler(msgHandler);
       doSendPublic(new JSONObject("{ action: getTime }"));
     }
 
     /**
-   * Returns available markets.
-   *
-   * @param options optional parameters: market
-   * @param msgHandler callback
-   * @return JSONObject response, get markets through response.getJSONArray("response") and iterate over array to get objects array.getJSONObject(index)
-   */
+     * Returns available markets.
+     *
+     * @param options optional parameters: market
+     * @param msgHandler callback
+     * @return JSONObject response, get markets through response.getJSONArray("response") and iterate over array to get objects array.getJSONObject(index)
+     */
     public void markets(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addMarketsHandler(msgHandler);
       options.put("action", "getMarkets");
       doSendPublic(options);
     }
 
-  /**
-   * Returns available assets.
-   *
-   * @param options optional parameters: symbol
-   * @param msgHandler callback
-   * @return JSONObject response, get assets through response.getJSONArray("response") and iterate over array to get objects array.getJSONObject(index)
-   */
+    /**
+     * Returns available assets.
+     *
+     * @param options optional parameters: symbol
+     * @param msgHandler callback
+     * @return JSONObject response, get assets through response.getJSONArray("response") and iterate over array to get objects array.getJSONObject(index)
+     */
     public void assets(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addAssetsHandler(msgHandler);
       options.put("action", "getAssets");
       doSendPublic(options);
     }
 
-  /**
-   * Returns the book per market.
-   *
-   * @param market market for which the book should be returned.
-   * @param options optional parameters: depth
-   * @param msgHandler callback
-   * @return JSONObject response, get book through response.getJSONObject("response") and get individual values through object.getJSONArray("bids"/"asks").get(index).get(index)
-   */
+    /**
+     * Returns the book per market.
+     *
+     * @param market market for which the book should be returned.
+     * @param options optional parameters: depth
+     * @param msgHandler callback
+     * @return JSONObject response, get book through response.getJSONObject("response") and get individual values through object.getJSONArray("bids"/"asks").get(index).get(index)
+     */
     public void book(String market, JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addBookHandler(msgHandler);
       options.put("action", "getBook");
@@ -814,13 +785,13 @@ public class Bitvavo {
     }
 
     /**
-   * Returns the trades per market.
-   *
-   * @param market market for which the trades should be returned.
-   * @param options optional parameters: limit, start, end, tradeIdFrom, tradeIdTo
-   * @param msgHandler callback
-   * @return JSONObject response, get trades through response.getJSONArray("response") and iterate over array to get objects array.getJSONObject(index)
-   */
+     * Returns the trades per market.
+     *
+     * @param market market for which the trades should be returned.
+     * @param options optional parameters: limit, start, end, tradeIdFrom, tradeIdTo
+     * @param msgHandler callback
+     * @return JSONObject response, get trades through response.getJSONArray("response") and iterate over array to get objects array.getJSONObject(index)
+     */
     public void publicTrades(String market, JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addTradesHandler(msgHandler);
       options.put("action", "getTrades");
@@ -829,14 +800,14 @@ public class Bitvavo {
     }
 
     /**
-   * Returns the candles per market.
-   *
-   * @param market market for which the candles should be returned.
-   * @param interval interval for which the candles should be returned.
-   * @param options optional parameters: limit, start, end
-   * @param msgHandler callback
-   * @return JSONObject response, get candles through response.getJSONArray("response") and iterate over array to get arrays containing timestamp, open, high, low, close and volume: array.getJSONArray(index) (i.e. for the open price array.getJSONArray(index).get(1))
-   */
+     * Returns the candles per market.
+     *
+     * @param market market for which the candles should be returned.
+     * @param interval interval for which the candles should be returned.
+     * @param options optional parameters: limit, start, end
+     * @param msgHandler callback
+     * @return JSONObject response, get candles through response.getJSONArray("response") and iterate over array to get arrays containing timestamp, open, high, low, close and volume: array.getJSONArray(index) (i.e. for the open price array.getJSONArray(index).get(1))
+     */
     public void candles(String market, String interval, JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addCandlesHandler(msgHandler);
       options.put("action", "getCandles");
@@ -846,12 +817,12 @@ public class Bitvavo {
     }
 
     /**
-   * Returns the 24 hour ticker.
-   *
-   * @param options optional parameters: market
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over array to get 24h ticker objects array.getJSONObject(index)
-   */
+     * Returns the 24 hour ticker.
+     *
+     * @param options optional parameters: market
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over array to get 24h ticker objects array.getJSONObject(index)
+     */
     public void ticker24h(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addTicker24hHandler(msgHandler);
       options.put("action", "getTicker24h");
@@ -859,44 +830,44 @@ public class Bitvavo {
     }
 
     /**
-   * Returns the price ticker.
-   *
-   * @param options optional parameters: market
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over array to get price ticker objects array.getJSONObject(index)
-   */
+     * Returns the price ticker.
+     *
+     * @param options optional parameters: market
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over array to get price ticker objects array.getJSONObject(index)
+     */
     public void tickerPrice(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addTickerPriceHandler(msgHandler);
       options.put("action", "getTickerPrice");
       doSendPublic(options);
     }
 
-     /**
-   * Returns the price ticker.
-   *
-   * @param options optional parameters: market
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over array to get book ticker objects array.getJSONObject(index)
-   */
+    /**
+     * Returns the price ticker.
+     *
+     * @param options optional parameters: market
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over array to get book ticker objects array.getJSONObject(index)
+     */
     public void tickerBook(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addTickerBookHandler(msgHandler);
       options.put("action", "getTickerBook");
       doSendPublic(options);
     }
 
-  /**
-   * Places an order.
-   *
-   * @param market market on which the order should be created
-   * @param side is this a sell or buy order
-   * @param orderType is this a limit or market order
-   * @param body optional body parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection)
-   *                                       stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
-   *                                       stopLossLimit/takeProfitLimit:(amount, price, postOnly, triggerType, triggerReference, triggerAmount)
-   *                                       all orderTypes: timeInForce, selfTradePrevention, responseRequired
-   * @param msgHandler callback
-   * @return JSONObject response, get order object through response.getJSONObject("response")
-   */
+    /**
+     * Places an order.
+     *
+     * @param market market on which the order should be created
+     * @param side is this a sell or buy order
+     * @param orderType is this a limit or market order
+     * @param body optional body parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection)
+     *                                       stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+     *                                       stopLossLimit/takeProfitLimit:(amount, price, postOnly, triggerType, triggerReference, triggerAmount)
+     *                                       all orderTypes: timeInForce, selfTradePrevention, responseRequired
+     * @param msgHandler callback
+     * @return JSONObject response, get order object through response.getJSONObject("response")
+     */
     public void placeOrder(String market, String side, String orderType, JSONObject body, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addPlaceOrderHandler(msgHandler);
       body.put("market", market);
@@ -907,13 +878,13 @@ public class Bitvavo {
     }
 
     /**
-   * Returns an order.
-   *
-   * @param market market on which the order should be returned
-   * @param orderId the order which should be returned
-   * @param msgHandler callback
-   * @return JSONObject response, get order object through response.getJSONObject("response")
-   */
+     * Returns an order.
+     *
+     * @param market market on which the order should be returned
+     * @param orderId the order which should be returned
+     * @param msgHandler callback
+     * @return JSONObject response, get order object through response.getJSONObject("response")
+     */
     public void getOrder(String market, String orderId, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addGetOrderHandler(msgHandler);
       JSONObject options = new JSONObject();
@@ -924,16 +895,16 @@ public class Bitvavo {
     }
 
     /**
-   * Updates an order.
-   *
-   * @param market market on which the order should be updated
-   * @param orderId the order which should be updated
-   * @param body optional body parameters: limit:(amount, amountRemaining, price, timeInForce, selfTradePrevention, postOnly)
-   *                           untriggered stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
-   *                                       stopLossLimit/takeProfitLimit: (amount, price, postOnly, triggerType, triggerReference, triggerAmount)
-   * @param msgHandler callback
-   * @return JSONObject response, get order object through response.getJSONObject("response")
-   */
+     * Updates an order.
+     *
+     * @param market market on which the order should be updated
+     * @param orderId the order which should be updated
+     * @param body optional body parameters: limit:(amount, amountRemaining, price, timeInForce, selfTradePrevention, postOnly)
+     *                           untriggered stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+     *                                       stopLossLimit/takeProfitLimit: (amount, price, postOnly, triggerType, triggerReference, triggerAmount)
+     * @param msgHandler callback
+     * @return JSONObject response, get order object through response.getJSONObject("response")
+     */
     public void updateOrder(String market, String orderId, JSONObject body, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addUpdateOrderHandler(msgHandler);
       body.put("market", market);
@@ -943,13 +914,13 @@ public class Bitvavo {
     }
 
     /**
-   * Cancels an order.
-   *
-   * @param market market on which the order should be cancelled
-   * @param orderId the order which should be cancelled
-   * @param msgHandler callback
-   * @return JSONObject response, get orderId through response.getJSONObject("response").getString("orderId")
-   */
+     * Cancels an order.
+     *
+     * @param market market on which the order should be cancelled
+     * @param orderId the order which should be cancelled
+     * @param msgHandler callback
+     * @return JSONObject response, get orderId through response.getJSONObject("response").getString("orderId")
+     */
     public void cancelOrder(String market, String orderId, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addCancelOrderHandler(msgHandler);
       JSONObject options = new JSONObject();
@@ -959,14 +930,14 @@ public class Bitvavo {
       doSendPrivate(options);
     }
 
-  /**
-   * Returns multiple orders at once
-   *
-   * @param market market on which the orders should be returned
-   * @param options optional parameters: limit, start, end, orderIdFrom, orderIdTo
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get order objects array.getJSONObject(index)
-   */
+    /**
+     * Returns multiple orders at once
+     *
+     * @param market market on which the orders should be returned
+     * @param options optional parameters: limit, start, end, orderIdFrom, orderIdTo
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get order objects array.getJSONObject(index)
+     */
     public void getOrders(String market, JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addGetOrdersHandler(msgHandler);
       options.put("action", "privateGetOrders");
@@ -975,39 +946,39 @@ public class Bitvavo {
     }
 
     /**
-   * Cancels multiple orders at once
-   *
-   * @param options optional parameters: market
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get orderId's objects array.getJSONObject(index).getString("orderId")
-   */
+     * Cancels multiple orders at once
+     *
+     * @param options optional parameters: market
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get orderId's objects array.getJSONObject(index).getString("orderId")
+     */
     public void cancelOrders(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addCancelOrdersHandler(msgHandler);
       options.put("action", "privateCancelOrders");
       doSendPrivate(options);
     }
 
-     /**
-   * Get all open orders at once
-   *
-   * @param options optional parameters: market
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get open orders objects array.getJSONObject(index)
-   */
+    /**
+     * Get all open orders at once
+     *
+     * @param options optional parameters: market
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get open orders objects array.getJSONObject(index)
+     */
     public void ordersOpen(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addGetOrdersOpenHandler(msgHandler);
       options.put("action", "privateGetOrdersOpen");
       doSendPrivate(options);
     }
 
-     /**
-   * Returns all trades within a market
-   *
-   * @param market for which market should the trades be returned
-   * @param options optional parameters: limit, start, end, tradeIdFrom, tradeIdTo
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get trades objects array.getJSONObject(index)
-   */
+    /**
+     * Returns all trades within a market
+     *
+     * @param market for which market should the trades be returned
+     * @param options optional parameters: limit, start, end, tradeIdFrom, tradeIdTo
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get trades objects array.getJSONObject(index)
+     */
     public void trades(String market, JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addGetTradesHandler(msgHandler);
       options.put("action", "privateGetTrades");
@@ -1015,38 +986,38 @@ public class Bitvavo {
       doSendPrivate(options);
     }
 
-  /**
-   * Returns the fee tier for an account
-   *
-   * @param msgHandler callback
-   * @return JSONObject response, get taker fee through response.getJSONObject("response").getJSONObject("fees").getString("taker")
-   */
+    /**
+     * Returns the fee tier for an account
+     *
+     * @param msgHandler callback
+     * @return JSONObject response, get taker fee through response.getJSONObject("response").getJSONObject("fees").getString("taker")
+     */
     public void account(WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addAccountHandler(msgHandler);
       JSONObject options = new JSONObject("{ action: privateGetAccount }");
       doSendPrivate(options);
     }
 
-     /**
-   * Returns the balance for an account
-   *
-   * @param options optional parameters: symbol
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get balance objects array.getJSONObject(index)
-   */
+    /**
+     * Returns the balance for an account
+     *
+     * @param options optional parameters: symbol
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get balance objects array.getJSONObject(index)
+     */
     public void balance(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addBalanceHandler(msgHandler);
       options.put("action", "privateGetBalance");
       doSendPrivate(options);
     }
 
-      /**
-   * Returns the deposit address which can be used to increase the account balance
-   *
-   * @param symbol symbol specifying the crypto for which the deposit address should be returned
-   * @param msgHandler callback
-   * @return JSONObject response, get address through response.getJSONObject("response").getString("address")
-   */
+    /**
+     * Returns the deposit address which can be used to increase the account balance
+     *
+     * @param symbol symbol specifying the crypto for which the deposit address should be returned
+     * @param msgHandler callback
+     * @return JSONObject response, get address through response.getJSONObject("response").getString("address")
+     */
     public void depositAssets(String symbol, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addDepositAssetsHandler(msgHandler);
       JSONObject options = new JSONObject("{ action: privateDepositAssets }");
@@ -1054,16 +1025,16 @@ public class Bitvavo {
       doSendPrivate(options);
     }
 
-  /**
-   * Creates a withdrawal to another address
-   *
-   * @param symbol symbol specifying the crypto for which the withdrawal should be created
-   * @param amount string specifying the amount which should be withdrawn
-   * @param address string specifying the address to which the crypto should be sent
-   * @param body optional parameters: paymentId, internal, addWithdrawalFee
-   * @param msgHandler callback
-   * @return JSONObject response, get success confirmation through response.getJSONObject("response").getBoolean("success")
-   */
+    /**
+     * Creates a withdrawal to another address
+     *
+     * @param symbol symbol specifying the crypto for which the withdrawal should be created
+     * @param amount string specifying the amount which should be withdrawn
+     * @param address string specifying the address to which the crypto should be sent
+     * @param body optional parameters: paymentId, internal, addWithdrawalFee
+     * @param msgHandler callback
+     * @return JSONObject response, get success confirmation through response.getJSONObject("response").getBoolean("success")
+     */
     public void withdrawAssets(String symbol, String amount, String address, JSONObject body, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addWithdrawAssetsHandler(msgHandler);
       body.put("action", "privateWithdrawAssets");
@@ -1074,25 +1045,25 @@ public class Bitvavo {
     }
 
     /**
-   * Returns the entire deposit history for an account
-   *
-   * @param options optional parameters: symbol, limit, start, end
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get deposit objects array.getJSONObject(index)
-   */
+     * Returns the entire deposit history for an account
+     *
+     * @param options optional parameters: symbol, limit, start, end
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get deposit objects array.getJSONObject(index)
+     */
     public void depositHistory(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addDepositHistoryHandler(msgHandler);
       options.put("action", "privateGetDepositHistory");
       doSendPrivate(options);
     }
 
-  /**
-   * Returns the entire withdrawal history for an account
-   *
-   * @param options optional parameters: symbol, limit, start, end
-   * @param msgHandler callback
-   * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get withdrawal objects array.getJSONObject(index)
-   */
+    /**
+     * Returns the entire withdrawal history for an account
+     *
+     * @param options optional parameters: symbol, limit, start, end
+     * @param msgHandler callback
+     * @return JSONObject response, get array through response.getJSONArray("response") and iterate over the array to get withdrawal objects array.getJSONObject(index)
+     */
     public void withdrawalHistory(JSONObject options, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addWithdrawalHistoryHandler(msgHandler);
       options.put("action", "privateGetWithdrawalHistory");
@@ -1100,12 +1071,12 @@ public class Bitvavo {
     }
 
     /**
-   * Pushes an update every time the ticker for a market is updated
-   *
-   * @param market market for which tickers should be returned
-   * @param msgHandler callback, will be overwritten when subscriptionTicker() is called with the same market parameter.
-   * @return JSONObject response, get bestBid through response.getString("bestBid") and bestAsk through response.getString("bestAsk")
-   */
+     * Pushes an update every time the ticker for a market is updated
+     *
+     * @param market market for which tickers should be returned
+     * @param msgHandler callback, will be overwritten when subscriptionTicker() is called with the same market parameter.
+     * @return JSONObject response, get bestBid through response.getString("bestBid") and bestAsk through response.getString("bestAsk")
+     */
     public void subscriptionTicker(String market, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addSubscriptionTickerHandler(market, msgHandler);
       JSONObject options = new JSONObject();
@@ -1123,12 +1094,12 @@ public class Bitvavo {
     }
 
     /**
-   * Pushes an update every time the 24 hour ticker for a market is updated
-   *
-   * @param market market for which tickers should be returned
-   * @param msgHandler callback, will be overwritten when subscriptionTicker() is called with the same market parameter.
-   * @return JSONObject ticker, get individual fields through ticker.getString(<key>)
-   */
+     * Pushes an update every time the 24 hour ticker for a market is updated
+     *
+     * @param market market for which tickers should be returned
+     * @param msgHandler callback, will be overwritten when subscriptionTicker() is called with the same market parameter.
+     * @return JSONObject ticker, get individual fields through ticker.getString(<key>)
+     */
     public void subscriptionTicker24h(String market, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addSubscriptionTicker24hHandler(market, msgHandler);
       JSONObject options = new JSONObject();
@@ -1146,11 +1117,11 @@ public class Bitvavo {
     }
 
     /**
-   * Pushes an update every time an order is placed, order is canceled or trade is made for an account
-   *
-   * @param msgHandler callback, will be overwritten on multiple calls to subscriptionAccount
-   * @return JSONObject response, get type of event through response.getString("event")
-   */
+     * Pushes an update every time an order is placed, order is canceled or trade is made for an account
+     *
+     * @param msgHandler callback, will be overwritten on multiple calls to subscriptionAccount
+     * @return JSONObject response, get type of event through response.getString("event")
+     */
     public void subscriptionAccount(String market, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addSubscriptionAccountHandler(market, msgHandler);
       JSONObject options = new JSONObject();
@@ -1168,13 +1139,13 @@ public class Bitvavo {
     }
 
     /**
-   * Pushes an update every time an candle is formed for the specified market and interval
-   *
-   * @param market market for which candles should be pushed.
-   * @param interval interval for which the candles should be pushed
-   * @param msgHandler callback, will be overwritten on multiple calls to subscriptionCandles() with the same market and interval
-   * @return JSONObject response, get candle array (containing a single candle with open, high, low, close and volume) through response.getJSONObject("response").getJSONArray("candle")
-   */
+     * Pushes an update every time an candle is formed for the specified market and interval
+     *
+     * @param market market for which candles should be pushed.
+     * @param interval interval for which the candles should be pushed
+     * @param msgHandler callback, will be overwritten on multiple calls to subscriptionCandles() with the same market and interval
+     * @return JSONObject response, get candle array (containing a single candle with open, high, low, close and volume) through response.getJSONObject("response").getJSONArray("candle")
+     */
     public void subscriptionCandles(String market, String interval, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addSubscriptionCandlesHandler(market, interval, msgHandler);
       JSONObject options = new JSONObject();
@@ -1195,12 +1166,12 @@ public class Bitvavo {
     }
 
     /**
-   * Pushes an update every time a trade is made within a market.
-   *
-   * @param market market for which trades should be pushed.
-   * @param msgHandler callback, will be overwritten on multiple calls to subscriptionTrades() with the same market
-   * @return JSONObject response, get trade object through response.getJSONObject("response")
-   */
+     * Pushes an update every time a trade is made within a market.
+     *
+     * @param market market for which trades should be pushed.
+     * @param msgHandler callback, will be overwritten on multiple calls to subscriptionTrades() with the same market
+     * @return JSONObject response, get trade object through response.getJSONObject("response")
+     */
     public void subscriptionTrades(String market, WebsocketClientEndpoint.MessageHandler msgHandler) {
       ws.addSubscriptionTradesHandler(market, msgHandler);
       JSONObject options = new JSONObject();
@@ -1217,7 +1188,7 @@ public class Bitvavo {
       doSendPublic(options);
     }
 
-      /**
+    /**
      * Pushes an update every time the book for a market is changed.
      *
      * @param market market for which book updates should be pushed.

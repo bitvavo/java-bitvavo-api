@@ -181,48 +181,49 @@ public class Bitvavo {
     return rateLimitRemaining;
   }
 
+  private String executePrivateRequest(String urlEndpoint, String urlParams, String method, JSONObject body) throws IOException {
+    long timestamp = System.currentTimeMillis();
+    String signature = createSignature(timestamp, method, (urlEndpoint + urlParams), body);
+    URL url = new URL(this.restUrl + urlEndpoint + urlParams);
+    HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
+
+    httpsCon.setRequestMethod(method);
+    httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
+    httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
+    httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
+    httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
+    httpsCon.setRequestProperty("Content-Type", "application/json");
+    if (body.length() != 0) {
+      httpsCon.setDoOutput(true);
+      OutputStreamWriter outputStreamWriter = new OutputStreamWriter(httpsCon.getOutputStream());
+      outputStreamWriter.write(body.toString());
+      outputStreamWriter.flush();
+    }
+
+    int responseCode = httpsCon.getResponseCode();
+
+    InputStream inputStream;
+    if (responseCode == 200) {
+      inputStream = httpsCon.getInputStream();
+      updateRateLimit(httpsCon.getHeaderFields());
+    } else {
+      inputStream = httpsCon.getErrorStream();
+    }
+    StringWriter writer = new StringWriter();
+    IOUtils.copy(inputStream, writer, "utf-8");
+    return writer.toString();
+  }
+
   public JSONObject privateRequest(String urlEndpoint, String urlParams, String method, JSONObject body) {
     try {
-      long timestamp = System.currentTimeMillis();
-      String signature = createSignature(timestamp, method, (urlEndpoint + urlParams), body);
-      URL url = new URL(this.restUrl + urlEndpoint + urlParams);
-      HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
-
-      httpsCon.setRequestMethod(method);
-      httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
-      httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
-      httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
-      httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
-      httpsCon.setRequestProperty("Content-Type", "application/json");
-      if(body.length() != 0) {
-        httpsCon.setDoOutput(true);
-        OutputStreamWriter outputStreamWriter = new OutputStreamWriter(httpsCon.getOutputStream());
-        outputStreamWriter.write(body.toString());
-        outputStreamWriter.flush();
-      }
-
-
-      int responseCode = httpsCon.getResponseCode();
-
-      InputStream inputStream;
-      if(responseCode == 200) {
-        inputStream = httpsCon.getInputStream();
-        updateRateLimit(httpsCon.getHeaderFields());
-      }
-      else {
-        inputStream = httpsCon.getErrorStream();
-      }
-      StringWriter writer = new StringWriter();
-      IOUtils.copy(inputStream, writer, "utf-8");
-      String result = writer.toString();
+      String result = executePrivateRequest(urlEndpoint, urlParams, method, body);
 
       JSONObject response = new JSONObject(result);
       if (result.contains("errorCode")) {
         errorRateLimit(response);
       }
       return response;
-    }
-    catch(Exception ex) {
+    } catch (Exception ex) {
       errorToConsole("Caught exception in privateRequest " + ex);
       return new JSONObject();
     }
@@ -230,40 +231,9 @@ public class Bitvavo {
 
   public JSONArray privateRequestArray(String urlEndpoint, String urlParams, String method, JSONObject body) {
     try {
-      long timestamp = System.currentTimeMillis();
-      String signature = createSignature(timestamp, method, (urlEndpoint + urlParams), body);
-      URL url = new URL(this.restUrl + urlEndpoint + urlParams);
-      HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
+      String result = executePrivateRequest(urlEndpoint, urlParams, method, body);
 
-      httpsCon.setRequestMethod(method);
-      httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
-      httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
-      httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
-      httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
-      httpsCon.setRequestProperty("Content-Type", "application/json");
-      if(body.length() != 0) {
-        httpsCon.setDoOutput(true);
-        OutputStreamWriter outputStreamWriter = new OutputStreamWriter(httpsCon.getOutputStream());
-        outputStreamWriter.write(body.toString());
-        outputStreamWriter.flush();
-      }
-
-      int responseCode = httpsCon.getResponseCode();
-
-      InputStream inputStream;
-      if(responseCode == 200) {
-        inputStream = httpsCon.getInputStream();
-        updateRateLimit(httpsCon.getHeaderFields());
-      }
-      else {
-        inputStream = httpsCon.getErrorStream();
-      }
-
-      StringWriter writer = new StringWriter();
-      IOUtils.copy(inputStream, writer, "utf-8");
-      String result = writer.toString();
-
-      if(result.contains("errorCode")) {
+      if (result.contains("errorCode")) {
         errorRateLimit(new JSONObject(result));
         errorToConsole(result);
         return new JSONArray();
@@ -271,47 +241,48 @@ public class Bitvavo {
 
       JSONArray response = new JSONArray(result);
       return response;
-    }
-    catch(Exception ex) {
+    } catch (Exception ex) {
       errorToConsole("Caught exception in privateRequest " + ex);
       return new JSONArray();
     }
   }
 
+  private String executePublicRequest(String urlString, String method, JSONObject data) throws IOException {
+    URL url = new URL(urlString);
+    HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
+    httpsCon.setRequestMethod(method);
+    if (this.apiKey != "") {
+      long timestamp = System.currentTimeMillis();
+      String signature = createSignature(timestamp, method, urlString.replace(this.restUrl, ""), new JSONObject());
+      httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
+      httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
+      httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
+      httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
+      httpsCon.setRequestProperty("Content-Type", "application/json");
+    }
+    int responseCode = httpsCon.getResponseCode();
+    InputStream inputStream;
+    if (responseCode == 200) {
+      inputStream = httpsCon.getInputStream();
+      updateRateLimit(httpsCon.getHeaderFields());
+    } else {
+      inputStream = httpsCon.getErrorStream();
+    }
+    StringWriter writer = new StringWriter();
+    IOUtils.copy(inputStream, writer, "utf-8");
+    return writer.toString();
+  }
+
   public JSONObject publicRequest(String urlString, String method, JSONObject data) {
     try {
-      URL url = new URL(urlString);
-      HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
-      httpsCon.setRequestMethod(method);
-      if (this.apiKey != "") {
-        long timestamp = System.currentTimeMillis();
-        String signature = createSignature(timestamp, method, urlString.replace(this.restUrl, ""), new JSONObject());
-        httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
-        httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
-        httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
-        httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
-        httpsCon.setRequestProperty("Content-Type", "application/json");
-      }
-      int responseCode = httpsCon.getResponseCode();
-      InputStream inputStream;
-      if(responseCode == 200) {
-        inputStream = httpsCon.getInputStream();
-        updateRateLimit(httpsCon.getHeaderFields());
-      }
-      else {
-        inputStream = httpsCon.getErrorStream();
-      }
-      StringWriter writer = new StringWriter();
-      IOUtils.copy(inputStream, writer, "utf-8");
-      String result = writer.toString();
+      String result = executePublicRequest(urlString, method, data);
 
       JSONObject response = new JSONObject(result);
       if (result.contains("errorCode")) {
         errorRateLimit(response);
       }
       return response;
-    }
-    catch(IOException ex) {
+    } catch (IOException ex) {
       errorToConsole("Caught IOerror, " + ex);
     }
     return new JSONObject("{}");
@@ -319,32 +290,8 @@ public class Bitvavo {
 
   public JSONArray publicRequestArray(String urlString, String method, JSONObject data) {
     try {
-      URL url = new URL(urlString);
-      HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
-      httpsCon.setRequestMethod(method);
-      if (this.apiKey != "") {
-        long timestamp = System.currentTimeMillis();
-        String signature = createSignature(timestamp, method, urlString.replace(this.restUrl, ""), new JSONObject());
-        httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
-        httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
-        httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
-        httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
-        httpsCon.setRequestProperty("Content-Type", "application/json");
-      }
-      int responseCode = httpsCon.getResponseCode();
-      InputStream inputStream;
-      if(responseCode == 200) {
-        inputStream = httpsCon.getInputStream();
-        updateRateLimit(httpsCon.getHeaderFields());
-      }
-      else {
-        inputStream = httpsCon.getErrorStream();
-      }
-
-      StringWriter writer = new StringWriter();
-      IOUtils.copy(inputStream, writer, "utf-8");
-      String result = writer.toString();
-      if(result.indexOf("error") != -1) {
+      String result = executePublicRequest(urlString, method, data);
+      if (result.indexOf("error") != -1) {
         errorRateLimit(new JSONObject(result));
         return new JSONArray("[" + result + "]");
       }
@@ -352,11 +299,9 @@ public class Bitvavo {
 
       JSONArray response = new JSONArray(result);
       return response;
-    }
-    catch(MalformedURLException ex) {
+    } catch (MalformedURLException ex) {
       errorToConsole("Caught Malformed Url error, " + ex);
-    }
-    catch(IOException ex) {
+    } catch (IOException ex) {
       errorToConsole("Caught IOerror, " + ex);
     }
     return new JSONArray("[{}]");

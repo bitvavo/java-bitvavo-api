@@ -130,21 +130,19 @@ public class Bitvavo {
       String placeHolder = message.split(" at ")[1].replace(".", "");
       rateLimitReset = Long.parseLong(placeHolder);
       if (!rateLimitThreadStarted) {
-        new Thread(new Runnable() {
-          public void run() {
-            try {
-              long timeToWait = rateLimitReset - System.currentTimeMillis();
-              rateLimitThreadStarted = true;
-              debugToConsole("We are waiting for " + ((int) timeToWait / (int) 1000) + " seconds, untill the rate limit ban will be lifted.");
-              Thread.sleep(timeToWait);
-            } catch (InterruptedException ie) {
-              errorToConsole("Got interrupted while waiting for the rate limit ban to be lifted.");
-            }
-            rateLimitThreadStarted = false;
-            if (System.currentTimeMillis() >= rateLimitReset) {
-              debugToConsole("Rate limit ban has been lifted, resetting rate limit to 1000.");
-              rateLimitRemaining = 1000;
-            }
+        new Thread(() -> {
+          try {
+            long timeToWait = rateLimitReset - System.currentTimeMillis();
+            rateLimitThreadStarted = true;
+            debugToConsole("We are waiting for " + ((int) timeToWait / (int) 1000) + " seconds, until the rate limit ban will be lifted.");
+            Thread.sleep(timeToWait);
+          } catch (InterruptedException ie) {
+            errorToConsole("Got interrupted while waiting for the rate limit ban to be lifted.");
+          }
+          rateLimitThreadStarted = false;
+          if (System.currentTimeMillis() >= rateLimitReset) {
+            debugToConsole("Rate limit ban has been lifted, resetting rate limit to 1000.");
+            rateLimitRemaining = 1000;
           }
         }).start();
       }
@@ -160,21 +158,19 @@ public class Bitvavo {
     if(resetHeader != null) {
       rateLimitReset = Long.parseLong(resetHeader);
       if (!rateLimitThreadStarted) {
-        new Thread(new Runnable() {
-          public void run() {
-            try {
-              long timeToWait = rateLimitReset - System.currentTimeMillis();
-              rateLimitThreadStarted = true;
-              debugToConsole("We started a thread which waits for " + ((int) timeToWait / (int) 1000) + " seconds, untill the rate limit will be reset.");
-              Thread.sleep(timeToWait);
-            } catch (InterruptedException ie) {
-              errorToConsole("Got interrupted while waiting for the rate limit to be reset.");
-            }
-            rateLimitThreadStarted = false;
-            if (System.currentTimeMillis() >= rateLimitReset) {
-              debugToConsole("Resetting rate limit to 1000.");
-              rateLimitRemaining = 1000;
-            }
+        new Thread(() -> {
+          try {
+            long timeToWait = rateLimitReset - System.currentTimeMillis();
+            rateLimitThreadStarted = true;
+            debugToConsole("We started a thread which waits for " + ((int) timeToWait / (int) 1000) + " seconds, until the rate limit will be reset.");
+            Thread.sleep(timeToWait);
+          } catch (InterruptedException ie) {
+            errorToConsole("Got interrupted while waiting for the rate limit to be reset.");
+          }
+          rateLimitThreadStarted = false;
+          if (System.currentTimeMillis() >= rateLimitReset) {
+            debugToConsole("Resetting rate limit to 1000.");
+            rateLimitRemaining = 1000;
           }
         }).start();
       }

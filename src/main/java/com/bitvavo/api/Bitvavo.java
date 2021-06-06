@@ -16,13 +16,13 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 
 public class Bitvavo {
-  String apiKey;
-  String apiSecret;
-  String restUrl;
-  String wsUrl;
+  String apiKey = "";
+  String apiSecret = "";
+  String restUrl = "https://api.bitvavo.com/v2";
+  String wsUrl = "wss://ws.bitvavo.com/v2/";
   boolean authenticated;
-  boolean debugging = true;
-  int window;
+  boolean debugging = false;
+  int window = 10000;
   WebsocketClientEndpoint ws;
   Websocket websocketObject;
   KeepAliveThread keepAliveThread;
@@ -48,51 +48,21 @@ public class Bitvavo {
 
   public Bitvavo(JSONObject options) {
     JSONArray keys = options.names();
-    boolean apiKeySet = false;
-    boolean apiSecretSet = false;
-    boolean windowSet = false;
-    boolean debuggingSet = false;
-    boolean restUrlSet = false;
-    boolean wsUrlSet = false;
     for (int i = 0; i < keys.length(); ++i) {
       String key = keys.getString(i);
-      if(key.toLowerCase().equals("apikey")) {
+      if(key.equalsIgnoreCase("apikey")) {
         this.apiKey = options.getString(key);
-        apiKeySet = true;
-      } else if(key.toLowerCase().equals("apisecret")) {
+      } else if(key.equalsIgnoreCase("apisecret")) {
         this.apiSecret = options.getString(key);
-        apiSecretSet = true;
-      } else if(key.toLowerCase().equals("accesswindow")) {
+      } else if(key.equalsIgnoreCase("accesswindow")) {
         this.window = options.getInt(key);
-        windowSet = true;
-      } else if(key.toLowerCase().equals("debugging")) {
+      } else if(key.equalsIgnoreCase("debugging")) {
         this.debugging = options.getBoolean(key);
-        debuggingSet = true;
-      } else if(key.toLowerCase().equals("resturl")) {
+      } else if(key.equalsIgnoreCase("resturl")) {
         this.restUrl = options.getString(key);
-        restUrlSet = true;
-      } else if(key.toLowerCase().equals("wsurl")) {
+      } else if(key.equalsIgnoreCase("wsurl")) {
         this.wsUrl = options.getString(key);
-        wsUrlSet = true;
       }
-    }
-    if (!apiKeySet) {
-      this.apiKey = "";
-    }
-    if (!apiSecretSet) {
-      this.apiSecret = "";
-    }
-    if (!windowSet) {
-      this.window = 10000;
-    }
-    if (!debuggingSet) {
-      this.debugging = false;
-    }
-    if (!restUrlSet) {
-      this.restUrl = "https://api.bitvavo.com/v2";
-    }
-    if (!wsUrlSet) {
-      this.wsUrl = "wss://ws.bitvavo.com/v2/";
     }
   }
 

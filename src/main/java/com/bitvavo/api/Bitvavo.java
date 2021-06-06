@@ -79,7 +79,7 @@ public class Bitvavo {
     return this.apiSecret;
   }
 
-  private String createPostfix(JSONObject options) {
+  private String createUrlParams(JSONObject options) {
     String params = options.keySet().stream().map(key -> key + "=" + options.get(key).toString())
             .collect(Collectors.joining("&"));
     if(options.length() > 0) {
@@ -251,7 +251,7 @@ public class Bitvavo {
     URL url = new URL(urlString);
     HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
     httpsCon.setRequestMethod(method);
-    if (this.apiKey != "") {
+    if (this.apiKey.isEmpty()) {
       long timestamp = System.currentTimeMillis();
       String signature = createSignature(timestamp, method, urlString.replace(this.restUrl, ""), new JSONObject());
       httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
@@ -312,7 +312,7 @@ public class Bitvavo {
    * @return JSONObject response, get time through response.getLong("time")
    */
   public JSONObject time() {
-    return publicRequest((this.restUrl + "/time"), "GET", new JSONObject());
+    return publicRequest(this.restUrl + "/time", "GET", new JSONObject());
   }
 
   /**
@@ -321,13 +321,13 @@ public class Bitvavo {
    * @return JSONArray response, get markets by iterating over array: response.get(index)
    */
   public JSONArray markets(JSONObject options) {
-    String postfix = createPostfix(options);
+    String urlParams = createUrlParams(options);
     if(options.has("market")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/markets" + postfix), "GET", new JSONObject()));
+      returnArray.put(publicRequest((this.restUrl + "/markets" + urlParams), "GET", new JSONObject()));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/markets" + postfix), "GET", new JSONObject());
+      return publicRequestArray((this.restUrl + "/markets" + urlParams), "GET", new JSONObject());
     }
   }
 
@@ -337,13 +337,13 @@ public class Bitvavo {
    * @return JSONArray response, get assets by iterating over array response.get(index)
    */
   public JSONArray assets(JSONObject options) {
-    String postfix = createPostfix(options);
+    String urlParams = createUrlParams(options);
     if(options.has("symbol")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/assets" + postfix), "GET", new JSONObject()));
+      returnArray.put(publicRequest((this.restUrl + "/assets" + urlParams), "GET", new JSONObject()));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/assets" + postfix), "GET", new JSONObject());
+      return publicRequestArray((this.restUrl + "/assets" + urlParams), "GET", new JSONObject());
     }
   }
 
@@ -354,8 +354,8 @@ public class Bitvavo {
    * @return JSONObject response, get bids through response.getJSONArray("bids"), asks through response.getJSONArray("asks")
    */
   public JSONObject book(String market, JSONObject options) {
-    String postfix = createPostfix(options);
-    return publicRequest((this.restUrl + "/" + market + "/book" + postfix), "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return publicRequest((this.restUrl + "/" + market + "/book" + urlParams), "GET", new JSONObject());
   }
 
   /**
@@ -365,8 +365,8 @@ public class Bitvavo {
    * @return JSONArray response, iterate over array to get individual trades response.getJSONObject(index)
    */
   public JSONArray publicTrades(String market, JSONObject options) {
-    String postfix = createPostfix(options);
-    return publicRequestArray((this.restUrl + "/" + market + "/trades" + postfix), "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return publicRequestArray((this.restUrl + "/" + market + "/trades" + urlParams), "GET", new JSONObject());
   }
 
   /**
@@ -378,8 +378,8 @@ public class Bitvavo {
    */
   public JSONArray candles(String market, String interval, JSONObject options) {
     options.put("interval", interval);
-    String postfix = createPostfix(options);
-    return publicRequestArray((this.restUrl + "/" + market + "/candles" + postfix), "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return publicRequestArray((this.restUrl + "/" + market + "/candles" + urlParams), "GET", new JSONObject());
   }
 
   /**
@@ -388,13 +388,13 @@ public class Bitvavo {
    * @return JSONArray response, get individual prices by iterating over array: response.getJSONObject(index)
    */
   public JSONArray tickerPrice(JSONObject options) {
-    String postfix = createPostfix(options);
+    String urlParams = createUrlParams(options);
     if(options.has("market")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/ticker/price" + postfix), "GET", new JSONObject()));
+      returnArray.put(publicRequest((this.restUrl + "/ticker/price" + urlParams), "GET", new JSONObject()));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/ticker/price" + postfix), "GET", new JSONObject());
+      return publicRequestArray((this.restUrl + "/ticker/price" + urlParams), "GET", new JSONObject());
     }
   }
 
@@ -404,13 +404,13 @@ public class Bitvavo {
    * @return JSONArray response, get individual books by iterating over array: response.getJSONObject(index)
    */
   public JSONArray tickerBook(JSONObject options) {
-    String postfix = createPostfix(options);
+    String urlParams = createUrlParams(options);
     if(options.has("market")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/ticker/book" + postfix), "GET", new JSONObject()));
+      returnArray.put(publicRequest((this.restUrl + "/ticker/book" + urlParams), "GET", new JSONObject()));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/ticker/book" + postfix), "GET", new JSONObject());
+      return publicRequestArray((this.restUrl + "/ticker/book" + urlParams), "GET", new JSONObject());
     }
   }
 
@@ -420,13 +420,13 @@ public class Bitvavo {
    * @return JSONArray response, get individual 24 hour prices by iterating over array: response.getJSONObject(index)
    */
   public JSONArray ticker24h(JSONObject options) {
-    String postfix = createPostfix(options);
+    String urlParams = createUrlParams(options);
     if(options.has("market")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/ticker/24h" + postfix), "GET", new JSONObject()));
+      returnArray.put(publicRequest((this.restUrl + "/ticker/24h" + urlParams), "GET", new JSONObject()));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/ticker/24h" + postfix), "GET", new JSONObject());
+      return publicRequestArray((this.restUrl + "/ticker/24h" + urlParams), "GET", new JSONObject());
     }
   }
 
@@ -458,8 +458,8 @@ public class Bitvavo {
     JSONObject options = new JSONObject();
     options.put("market", market);
     options.put("orderId", orderId);
-    String postfix = createPostfix(options);
-    return privateRequest("/order", postfix, "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequest("/order", urlParams, "GET", new JSONObject());
   }
 
   /**
@@ -487,8 +487,8 @@ public class Bitvavo {
     JSONObject options = new JSONObject();
     options.put("market", market);
     options.put("orderId", orderId);
-    String postfix = createPostfix(options);
-    return privateRequest("/order", postfix, "DELETE", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequest("/order", urlParams, "DELETE", new JSONObject());
   }
 
   /**
@@ -499,8 +499,8 @@ public class Bitvavo {
    */
   public JSONArray getOrders(String market, JSONObject options) {
     options.put("market", market);
-    String postfix = createPostfix(options);
-    return privateRequestArray("/orders", postfix, "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequestArray("/orders", urlParams, "GET", new JSONObject());
   }
 
   /**
@@ -509,8 +509,8 @@ public class Bitvavo {
    * @return JSONArray response, get individual cancelled orderId's by iterating over array: response.getJSONObject(index).getString("orderId")
    */
   public JSONArray cancelOrders(JSONObject options) {
-    String postfix = createPostfix(options);
-    return privateRequestArray("/orders", postfix, "DELETE", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequestArray("/orders", urlParams, "DELETE", new JSONObject());
   }
 
   /**
@@ -519,8 +519,8 @@ public class Bitvavo {
    * @return JSONArray response, get individual orders by iterating over array: response.getJSONObject(index)
    */
   public JSONArray ordersOpen(JSONObject options) {
-    String postfix = createPostfix(options);
-    return privateRequestArray("/ordersOpen", postfix, "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequestArray("/ordersOpen", urlParams, "GET", new JSONObject());
   }
 
   /**
@@ -531,8 +531,8 @@ public class Bitvavo {
    */
   public JSONArray trades(String market, JSONObject options) {
     options.put("market", market);
-    String postfix = createPostfix(options);
-    return privateRequestArray("/trades", postfix, "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequestArray("/trades", urlParams, "GET", new JSONObject());
   }
 
   /**
@@ -549,8 +549,8 @@ public class Bitvavo {
    * @return JSONArray response, get individual balances by iterating over array: response.getJSONObject(index)
    */
   public JSONArray balance(JSONObject options) {
-    String postfix = createPostfix(options);
-    return privateRequestArray("/balance", postfix, "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequestArray("/balance", urlParams, "GET", new JSONObject());
   }
 
   /**
@@ -561,8 +561,8 @@ public class Bitvavo {
   public JSONObject depositAssets(String symbol) {
     JSONObject options = new JSONObject();
     options.put("symbol", symbol);
-    String postfix = createPostfix(options);
-    return privateRequest("/deposit", postfix, "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequest("/deposit", urlParams, "GET", new JSONObject());
   }
 
   /**
@@ -586,8 +586,8 @@ public class Bitvavo {
    * @return JSONArray response, get individual deposits by iterating over the array: response.getJSONObject(index)
    */
   public JSONArray depositHistory(JSONObject options) {
-    String postfix = createPostfix(options);
-    return privateRequestArray("/depositHistory", postfix, "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequestArray("/depositHistory", urlParams, "GET", new JSONObject());
   }
 
   /**
@@ -596,8 +596,8 @@ public class Bitvavo {
    * @return JSONArray response, get individual withdrawals by iterating over the array: response.getJSONObject(index)
    */
   public JSONArray withdrawalHistory(JSONObject options) {
-    String postfix = createPostfix(options);
-    return privateRequestArray("/withdrawalHistory", postfix, "GET", new JSONObject());
+    String urlParams = createUrlParams(options);
+    return privateRequestArray("/withdrawalHistory", urlParams, "GET", new JSONObject());
   }
 
   /**

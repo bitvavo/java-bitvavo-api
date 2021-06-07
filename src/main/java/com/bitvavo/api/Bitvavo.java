@@ -15,6 +15,7 @@ import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -92,9 +93,9 @@ public class Bitvavo {
         result = result + body.toString();
       }
       Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-      SecretKeySpec secret_key = new SecretKeySpec(this.apiSecret.getBytes("UTF-8"), "HmacSHA256");
+      SecretKeySpec secret_key = new SecretKeySpec(this.apiSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
       sha256_HMAC.init(secret_key);
-      return new String(Hex.encodeHex(sha256_HMAC.doFinal(result.getBytes("UTF-8"))));
+      return new String(Hex.encodeHex(sha256_HMAC.doFinal(result.getBytes(StandardCharsets.UTF_8))));
     }
     catch(Exception ex) {
       errorToConsole("Caught exception in createSignature " + ex);
@@ -127,7 +128,7 @@ public class Bitvavo {
           try {
             long timeToWait = rateLimitReset - System.currentTimeMillis();
             rateLimitThreadStarted = true;
-            debugToConsole("We are waiting for " + ((int) timeToWait / (int) 1000) + " seconds, until the rate limit ban will be lifted.");
+            debugToConsole("We are waiting for " + ((int) timeToWait / 1000) + " seconds, until the rate limit ban will be lifted.");
             Thread.sleep(timeToWait);
           } catch (InterruptedException ie) {
             errorToConsole("Got interrupted while waiting for the rate limit ban to be lifted.");
@@ -155,7 +156,7 @@ public class Bitvavo {
           try {
             long timeToWait = rateLimitReset - System.currentTimeMillis();
             rateLimitThreadStarted = true;
-            debugToConsole("We started a thread which waits for " + ((int) timeToWait / (int) 1000) + " seconds, until the rate limit will be reset.");
+            debugToConsole("We started a thread which waits for " + ((int) timeToWait / 1000) + " seconds, until the rate limit will be reset.");
             Thread.sleep(timeToWait);
           } catch (InterruptedException ie) {
             errorToConsole("Got interrupted while waiting for the rate limit to be reset.");
@@ -232,8 +233,7 @@ public class Bitvavo {
         return new JSONArray();
       }
 
-      JSONArray response = new JSONArray(result);
-      return response;
+      return new JSONArray(result);
     } catch (Exception ex) {
       errorToConsole("Caught exception in privateRequest " + ex);
       return new JSONArray();
@@ -284,7 +284,7 @@ public class Bitvavo {
   public JSONArray publicRequestArray(String urlString, String method, JSONObject data) {
     try {
       String result = executePublicRequest(urlString, method, data);
-      if (result.indexOf("error") != -1) {
+      if (result.contains("error")) {
         errorRateLimit(new JSONObject(result));
         return new JSONArray("[" + result + "]");
       }
@@ -620,7 +620,7 @@ public class Bitvavo {
           }
         });
         ws = clientEndPoint;
-        book = new HashMap<String,Object>();
+        book = new HashMap<>();
         KeepAliveThread keepAliveThread = new KeepAliveThread();
         keepAliveThread.start();
         Bitvavo.this.keepAliveThread = keepAliveThread;

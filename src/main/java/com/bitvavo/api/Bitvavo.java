@@ -83,21 +83,20 @@ public class Bitvavo {
   }
 
   public String createSignature(long timestamp, String method, String urlEndpoint, JSONObject body) {
-    if(this.apiSecret == null || this.apiKey == null) {
+    if (this.apiSecret == null || this.apiKey == null) {
       errorToConsole("The API key or secret has not been set. Please pass the key and secret when instantiating the bitvavo object.");
       return "";
     }
     try {
       String result = timestamp + method + "/v2" + urlEndpoint;
-      if(body.length() != 0) {
-        result = result + body.toString();
+      if (body.length() != 0) {
+        result = result + body;
       }
-      Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-      SecretKeySpec secret_key = new SecretKeySpec(this.apiSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-      sha256_HMAC.init(secret_key);
-      return new String(Hex.encodeHex(sha256_HMAC.doFinal(result.getBytes(StandardCharsets.UTF_8))));
-    }
-    catch(Exception ex) {
+      Mac sha256HMAC = Mac.getInstance("HmacSHA256");
+      SecretKeySpec secretKey = new SecretKeySpec(this.apiSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+      sha256HMAC.init(secretKey);
+      return new String(Hex.encodeHex(sha256HMAC.doFinal(result.getBytes(StandardCharsets.UTF_8))));
+    } catch (Exception ex) {
       errorToConsole("Caught exception in createSignature " + ex);
       return "";
     }
@@ -204,7 +203,7 @@ public class Bitvavo {
       inputStream = httpsCon.getErrorStream();
     }
     StringWriter writer = new StringWriter();
-    IOUtils.copy(inputStream, writer, "utf-8");
+    IOUtils.copy(inputStream, writer, StandardCharsets.UTF_8);
     return writer.toString();
   }
 
@@ -262,7 +261,7 @@ public class Bitvavo {
       inputStream = httpsCon.getErrorStream();
     }
     StringWriter writer = new StringWriter();
-    IOUtils.copy(inputStream, writer, "utf-8");
+    IOUtils.copy(inputStream, writer, StandardCharsets.UTF_8);
     return writer.toString();
   }
 
@@ -290,8 +289,7 @@ public class Bitvavo {
       }
       debugToConsole("FULL RESPONSE: " + result);
 
-      JSONArray response = new JSONArray(result);
-      return response;
+      return new JSONArray(result);
     } catch (MalformedURLException ex) {
       errorToConsole("Caught Malformed Url error, " + ex);
     } catch (IOException ex) {
@@ -598,8 +596,7 @@ public class Bitvavo {
    * @return Websocket the object on which all websocket function can be called.
    */
   public Websocket newWebsocket() {
-    websocketObject = new Websocket();
-    return websocketObject;
+    return new Websocket();
   }
 
   public class Websocket {
@@ -607,7 +604,7 @@ public class Bitvavo {
       try {
         final WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(new URI(Bitvavo.this.wsUrl), Bitvavo.this);
         clientEndPoint.addAuthenticateHandler(response -> {
-          if(response.has("authenticated")) {
+          if (response.has("authenticated")) {
             authenticated = true;
             debugToConsole("We registered authenticated as true");
           }
@@ -615,11 +612,9 @@ public class Bitvavo {
         clientEndPoint.addMessageHandler(response -> errorToConsole("Unexpected message: " + response));
         ws = clientEndPoint;
         book = new HashMap<>();
-        KeepAliveThread keepAliveThread = new KeepAliveThread();
+        Bitvavo.this.keepAliveThread = new KeepAliveThread();
         keepAliveThread.start();
-        Bitvavo.this.keepAliveThread = keepAliveThread;
-      }
-      catch(Exception ex) {
+      } catch (Exception ex) {
         errorToConsole("Caught exception in websocket: " + ex);
       }
     }
@@ -637,17 +632,17 @@ public class Bitvavo {
     }
 
     public void doSendPrivate(JSONObject options) {
-      if(getApiKey() == null) {
+      if (getApiKey() == null) {
         errorToConsole("You forgot to set the key and secret, both are required for this functionality.");
+        return;
       }
-      else if(authenticated) {
+      if (authenticated) {
         ws.sendMessage(options.toString());
       } else {
         try {
           TimeUnit.MILLISECONDS.sleep(50);
           doSendPrivate(options);
-        }
-        catch(InterruptedException ex) {
+        } catch (InterruptedException ex) {
           errorToConsole("Interrupted, aborting send.");
         }
       }

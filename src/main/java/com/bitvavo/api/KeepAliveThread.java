@@ -1,6 +1,7 @@
 package com.bitvavo.api;
 
 public class KeepAliveThread extends Thread {
+  @Override
   public void run() {
     while (true) {
       try {

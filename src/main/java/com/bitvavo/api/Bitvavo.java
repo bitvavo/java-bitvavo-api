@@ -240,7 +240,7 @@ public class Bitvavo {
     }
   }
 
-  private String executePublicRequest(String urlString, String method, JSONObject data) throws IOException {
+  private String executePublicRequest(String urlString, String method) throws IOException {
     URL url = new URL(urlString);
     HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
     httpsCon.setRequestMethod(method);
@@ -266,9 +266,9 @@ public class Bitvavo {
     return writer.toString();
   }
 
-  public JSONObject publicRequest(String urlString, String method, JSONObject data) {
+  public JSONObject publicRequest(String urlString, String method) {
     try {
-      String result = executePublicRequest(urlString, method, data);
+      String result = executePublicRequest(urlString, method);
 
       JSONObject response = new JSONObject(result);
       if (result.contains("errorCode")) {
@@ -281,9 +281,9 @@ public class Bitvavo {
     return new JSONObject("{}");
   }
 
-  public JSONArray publicRequestArray(String urlString, String method, JSONObject data) {
+  public JSONArray publicRequestArray(String urlString, String method) {
     try {
-      String result = executePublicRequest(urlString, method, data);
+      String result = executePublicRequest(urlString, method);
       if (result.contains("error")) {
         errorRateLimit(new JSONObject(result));
         return new JSONArray("[" + result + "]");
@@ -305,7 +305,7 @@ public class Bitvavo {
    * @return JSONObject response, get time through response.getLong("time")
    */
   public JSONObject time() {
-    return publicRequest(this.restUrl + "/time", "GET", new JSONObject());
+    return publicRequest(this.restUrl + "/time", "GET");
   }
 
   /**
@@ -317,10 +317,10 @@ public class Bitvavo {
     String urlParams = createUrlParams(options);
     if(options.has("market")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/markets" + urlParams), "GET", new JSONObject()));
+      returnArray.put(publicRequest(this.restUrl + "/markets" + urlParams, "GET"));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/markets" + urlParams), "GET", new JSONObject());
+      return publicRequestArray(this.restUrl + "/markets" + urlParams, "GET");
     }
   }
 
@@ -333,10 +333,10 @@ public class Bitvavo {
     String urlParams = createUrlParams(options);
     if(options.has("symbol")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/assets" + urlParams), "GET", new JSONObject()));
+      returnArray.put(publicRequest(this.restUrl + "/assets" + urlParams, "GET"));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/assets" + urlParams), "GET", new JSONObject());
+      return publicRequestArray(this.restUrl + "/assets" + urlParams, "GET");
     }
   }
 
@@ -348,7 +348,7 @@ public class Bitvavo {
    */
   public JSONObject book(String market, JSONObject options) {
     String urlParams = createUrlParams(options);
-    return publicRequest((this.restUrl + "/" + market + "/book" + urlParams), "GET", new JSONObject());
+    return publicRequest(this.restUrl + "/" + market + "/book" + urlParams, "GET");
   }
 
   /**
@@ -359,7 +359,7 @@ public class Bitvavo {
    */
   public JSONArray publicTrades(String market, JSONObject options) {
     String urlParams = createUrlParams(options);
-    return publicRequestArray((this.restUrl + "/" + market + "/trades" + urlParams), "GET", new JSONObject());
+    return publicRequestArray(this.restUrl + "/" + market + "/trades" + urlParams, "GET");
   }
 
   /**
@@ -372,7 +372,7 @@ public class Bitvavo {
   public JSONArray candles(String market, String interval, JSONObject options) {
     options.put("interval", interval);
     String urlParams = createUrlParams(options);
-    return publicRequestArray((this.restUrl + "/" + market + "/candles" + urlParams), "GET", new JSONObject());
+    return publicRequestArray(this.restUrl + "/" + market + "/candles" + urlParams, "GET");
   }
 
   /**
@@ -384,10 +384,10 @@ public class Bitvavo {
     String urlParams = createUrlParams(options);
     if(options.has("market")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/ticker/price" + urlParams), "GET", new JSONObject()));
+      returnArray.put(publicRequest(this.restUrl + "/ticker/price" + urlParams, "GET"));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/ticker/price" + urlParams), "GET", new JSONObject());
+      return publicRequestArray(this.restUrl + "/ticker/price" + urlParams, "GET");
     }
   }
 
@@ -400,10 +400,10 @@ public class Bitvavo {
     String urlParams = createUrlParams(options);
     if(options.has("market")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/ticker/book" + urlParams), "GET", new JSONObject()));
+      returnArray.put(publicRequest(this.restUrl + "/ticker/book" + urlParams, "GET"));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/ticker/book" + urlParams), "GET", new JSONObject());
+      return publicRequestArray(this.restUrl + "/ticker/book" + urlParams, "GET");
     }
   }
 
@@ -416,10 +416,10 @@ public class Bitvavo {
     String urlParams = createUrlParams(options);
     if(options.has("market")) {
       JSONArray returnArray = new JSONArray();
-      returnArray.put(publicRequest((this.restUrl + "/ticker/24h" + urlParams), "GET", new JSONObject()));
+      returnArray.put(publicRequest(this.restUrl + "/ticker/24h" + urlParams, "GET"));
       return returnArray;
     } else {
-      return publicRequestArray((this.restUrl + "/ticker/24h" + urlParams), "GET", new JSONObject());
+      return publicRequestArray(this.restUrl + "/ticker/24h" + urlParams, "GET");
     }
   }
 
@@ -606,19 +606,13 @@ public class Bitvavo {
     public Websocket() {
       try {
         final WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(new URI(Bitvavo.this.wsUrl), Bitvavo.this);
-        clientEndPoint.addAuthenticateHandler(new WebsocketClientEndpoint.MessageHandler() {
-          public void handleMessage(JSONObject response) {
-            if(response.has("authenticated")) {
-              authenticated = true;
-              debugToConsole("We registered authenticated as true");
-            }
+        clientEndPoint.addAuthenticateHandler(response -> {
+          if(response.has("authenticated")) {
+            authenticated = true;
+            debugToConsole("We registered authenticated as true");
           }
         });
-        clientEndPoint.addMessageHandler(new WebsocketClientEndpoint.MessageHandler() {
-          public void handleMessage(JSONObject response) {
-            errorToConsole("Unexpected message: " + response);
-          }
-        });
+        clientEndPoint.addMessageHandler(response -> errorToConsole("Unexpected message: " + response));
         ws = clientEndPoint;
         book = new HashMap<>();
         KeepAliveThread keepAliveThread = new KeepAliveThread();
@@ -1148,7 +1142,7 @@ public class Bitvavo {
      */
     public void subscriptionBook(String market, WebsocketClientEndpoint.BookHandler msgHandler) {
       ws.keepBookCopy = true;
-      Map<String, Object> bidsAsks = new HashMap<String, Object>();
+      Map<String, Object> bidsAsks = new HashMap<>();
       bidsAsks.put("bids", new ArrayList<ArrayList<Float>>());
       bidsAsks.put("asks", new ArrayList<ArrayList<Float>>());
 

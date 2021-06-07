@@ -32,13 +32,6 @@ public class Bitvavo {
   Websocket websocketObject;
   KeepAliveThread keepAliveThread;
   Map<String, Object> book;
-  boolean activatedSubscriptionTicker;
-  boolean activatedSubscriptionTicker24h;
-  boolean activatedSubscriptionAccount;
-  boolean activatedSubscriptionCandles;
-  boolean activatedSubscriptionTrades;
-  boolean activatedSubscriptionBookUpdate;
-  boolean activatedSubscriptionBook;
   JSONObject optionsSubscriptionTicker;
   JSONObject optionsSubscriptionTicker24h;
   JSONObject optionsSubscriptionAccount;
@@ -1026,7 +1019,6 @@ public class Bitvavo {
       subOptions.put("markets", new String[] {market});
       options.put("action", "subscribe");
       options.put("channels", new JSONObject[] {subOptions});
-      activatedSubscriptionTicker = true;
       if(optionsSubscriptionTicker == null) {
         optionsSubscriptionTicker = new JSONObject();
       }
@@ -1049,7 +1041,6 @@ public class Bitvavo {
       subOptions.put("markets", new String[] {market});
       options.put("action", "subscribe");
       options.put("channels", new JSONObject[] {subOptions});
-      activatedSubscriptionTicker24h = true;
       if(optionsSubscriptionTicker24h == null) {
         optionsSubscriptionTicker24h = new JSONObject();
       }
@@ -1071,7 +1062,6 @@ public class Bitvavo {
       subOptions.put("markets", new String[] {market});
       options.put("action", "subscribe");
       options.put("channels", new JSONObject[] {subOptions});
-      activatedSubscriptionAccount = true;
       if(optionsSubscriptionAccount == null) {
         optionsSubscriptionAccount = new JSONObject();
       }
@@ -1096,7 +1086,6 @@ public class Bitvavo {
       subOptions.put("markets", new String[] {market});
       options.put("action", "subscribe");
       options.put("channels", new JSONObject[] {subOptions});
-      activatedSubscriptionCandles = true;
       JSONObject intervalIndex = new JSONObject();
       intervalIndex.put(interval, options);
       if(optionsSubscriptionCandles == null) {
@@ -1121,7 +1110,6 @@ public class Bitvavo {
       subOptions.put("markets", new String[] {market});
       options.put("action", "subscribe");
       options.put("channels", new JSONObject[] {subOptions});
-      activatedSubscriptionTrades = true;
       if(optionsSubscriptionTrades == null) {
         optionsSubscriptionTrades = new JSONObject();
       }
@@ -1144,7 +1132,6 @@ public class Bitvavo {
       subOptions.put("markets", new String[] {market});
       options.put("action", "subscribe");
       options.put("channels", new JSONObject[] {subOptions});
-      activatedSubscriptionBookUpdate = true;
       if(optionsSubscriptionBookUpdate == null) {
         optionsSubscriptionBookUpdate = new JSONObject();
       }
@@ -1170,7 +1157,6 @@ public class Bitvavo {
       JSONObject options = new JSONObject();
       options.put("action", "getBook");
       options.put("market", market);
-      activatedSubscriptionBook = true;
       if(optionsSubscriptionBookFirst == null) {
         optionsSubscriptionBookFirst = new JSONObject();
       }

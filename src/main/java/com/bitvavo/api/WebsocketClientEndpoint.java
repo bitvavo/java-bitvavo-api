@@ -126,14 +126,14 @@ public class WebsocketClientEndpoint {
             authenticate.put("window", Integer.toString(bitvavo.window));
             this.sendMessage(authenticate.toString());
         }
-        if(bitvavo.activatedSubscriptionTicker) {
+        if(bitvavo.optionsSubscriptionTicker != null) {
             Iterator<String> markets = bitvavo.optionsSubscriptionTicker.keys();
             while(markets.hasNext()) {
                 String market = markets.next();
                 this.sendMessage(bitvavo.optionsSubscriptionTicker.get(market).toString());
             }
         }
-        if(bitvavo.activatedSubscriptionTicker24h) {
+        if(bitvavo.optionsSubscriptionTicker24h != null) {
             Iterator<String> markets = bitvavo.optionsSubscriptionTicker24h.keys();
             while(markets.hasNext()) {
                 String market = markets.next();
@@ -141,11 +141,11 @@ public class WebsocketClientEndpoint {
             }
         }
         // Account uses a threaded function, since we need a response on authenticate before we can send.
-        if(bitvavo.activatedSubscriptionAccount) {
+        if(bitvavo.optionsSubscriptionAccount != null) {
             WebsocketSendThread websocketSendThread = new WebsocketSendThread(bitvavo.optionsSubscriptionAccount, bitvavo, this);
             websocketSendThread.start();
         }
-        if(bitvavo.activatedSubscriptionCandles) {
+        if(bitvavo.optionsSubscriptionCandles != null) {
             Iterator<String> markets = bitvavo.optionsSubscriptionCandles.keys();
             while(markets.hasNext()) {
                 String market = markets.next();
@@ -157,21 +157,21 @@ public class WebsocketClientEndpoint {
                 }
             }
         }
-        if(bitvavo.activatedSubscriptionTrades) {
+        if(bitvavo.optionsSubscriptionTrades != null) {
             Iterator<String> markets = bitvavo.optionsSubscriptionTrades.keys();
             while(markets.hasNext()) {
                 String market = markets.next();
                 this.sendMessage(bitvavo.optionsSubscriptionTrades.get(market).toString());
             }
         }
-        if(bitvavo.activatedSubscriptionBookUpdate) {
+        if(bitvavo.optionsSubscriptionBookUpdate != null) {
             Iterator<String> markets = bitvavo.optionsSubscriptionBookUpdate.keys();
             while(markets.hasNext()) {
                 String market = markets.next();
                 this.sendMessage(bitvavo.optionsSubscriptionBookUpdate.get(market).toString());
             }
         }
-        if(bitvavo.activatedSubscriptionBook) {
+        if(bitvavo.optionsSubscriptionBookFirst != null) {
             Iterator<String> markets = bitvavo.optionsSubscriptionBookFirst.keys();
             while(markets.hasNext()) {
                 String market = markets.next();

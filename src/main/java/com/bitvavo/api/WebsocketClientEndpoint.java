@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @ClientEndpoint
 public class WebsocketClientEndpoint {
@@ -295,86 +297,84 @@ public class WebsocketClientEndpoint {
             }
         }
         if (response.has("event")) {
-            if (response.getString("event").equals("subscribed")) {
-                JSONObject channel = response.getJSONObject("subscriptions");
-                StringBuilder subscribedString = new StringBuilder("We are now subscribed to the following channels: ");
-                for (String key : channel.keySet()) {
-                    subscribedString.append(subscribedString + key + ", ");
-                }
-                bitvavo.debugToConsole(subscribedString.substring(0, subscribedString.length() - 2));
-            } else if (response.getString("event").equals("authenticate") && this.authenticateHandler != null) {
-                this.authenticateHandler.handleMessage(response);
-            } else if (response.getString("event").equals("trade")) {
-                market = response.getString("market");
-                if (this.subscriptionTradesHandlerMap != null && this.subscriptionTradesHandlerMap.get(market) != null) {
-                    this.subscriptionTradesHandlerMap.get(market).handleMessage(response);
-                }
-            } else if (response.getString("event").equals("fill")) {
-                market = response.getString("market");
-                if (this.subscriptionAccountHandlerMap != null && this.subscriptionAccountHandlerMap.get(market) != null) {
-                    this.subscriptionAccountHandlerMap.get(market).handleMessage(response);
-                }
-            } else if (response.getString("event").equals("order")) {
-                market = response.getString("market");
-                if (this.subscriptionAccountHandlerMap != null && this.subscriptionAccountHandlerMap.get(market) != null) {
-                    this.subscriptionAccountHandlerMap.get(market).handleMessage(response);
-                }
-            } else if (response.getString("event").equals("ticker")) {
-                market = response.getString("market");
-                if (this.subscriptionTickerHandlerMap != null && this.subscriptionTickerHandlerMap.get(market) != null) {
-                    this.subscriptionTickerHandlerMap.get(market).handleMessage(response);
-                }
-            } else if (response.getString("event").equals("ticker24h")) {
-                JSONArray data = response.getJSONArray("data");
-                if (this.subscriptionTicker24hHandlerMap != null) {
-                    for (int i = 0; i < data.length(); i++) {
-                        JSONObject ticker = data.getJSONObject(i);
-                        market = ticker.getString("market");
-                        if (this.subscriptionTicker24hHandlerMap.get(market) != null) {
-                            this.subscriptionTicker24hHandlerMap.get(market).handleMessage(ticker);
+            switch (response.getString("event")) {
+                case "subscribed":
+                    JSONObject channel = response.getJSONObject("subscriptions");
+                    StringBuilder subscribedString = new StringBuilder("We are now subscribed to the following channels: ");
+                    for (String key : channel.keySet()) {
+                        subscribedString.append(subscribedString + key + ", ");
+                    }
+                    bitvavo.debugToConsole(subscribedString.substring(0, subscribedString.length() - 2));
+                    break;
+                case "authenticate":
+                    if (this.authenticateHandler != null)
+                        this.authenticateHandler.handleMessage(response);
+                    break;
+                case "trade":
+                    market = response.getString("market");
+                    if (this.subscriptionTradesHandlerMap != null && this.subscriptionTradesHandlerMap.get(market) != null)
+                        this.subscriptionTradesHandlerMap.get(market).handleMessage(response);
+                    break;
+                case "fill":
+                case "order":
+                    market = response.getString("market");
+                    if (this.subscriptionAccountHandlerMap != null && this.subscriptionAccountHandlerMap.get(market) != null)
+                        this.subscriptionAccountHandlerMap.get(market).handleMessage(response);
+                    break;
+                case "ticker":
+                    market = response.getString("market");
+                    if (this.subscriptionTickerHandlerMap != null && this.subscriptionTickerHandlerMap.get(market) != null)
+                        this.subscriptionTickerHandlerMap.get(market).handleMessage(response);
+                    break;
+                case "ticker24h":
+                    JSONArray data = response.getJSONArray("data");
+                    if (this.subscriptionTicker24hHandlerMap != null) {
+                        for (JSONObject ticker : IntStream.of(data.length())
+                                .mapToObj(data::getJSONObject).collect(Collectors.toList())) {
+                            market = ticker.getString("market");
+                            if (this.subscriptionTicker24hHandlerMap.get(market) != null)
+                                this.subscriptionTicker24hHandlerMap.get(market).handleMessage(ticker);
                         }
                     }
-                }
-            } else if (response.getString("event").equals("book")) {
-                market = response.getString("market");
-                if (this.subscriptionBookUpdateHandlerMap != null && this.subscriptionBookUpdateHandlerMap.get(market) != null) {
-                    this.subscriptionBookUpdateHandlerMap.get(market).handleMessage(response);
-                }
-                if (keepBookCopy && this.subscriptionBookHandlerMap != null
-                        && this.subscriptionBookHandlerMap.get(market) != null) {
-                    Map<String, Object> responseMap = jsonToMap(response);
-                    market = (String) responseMap.get("market");
-                    boolean restartLocalBook = false;
-
-                    Map<String, Object> bidsAsks = (Map<String, Object>) bitvavo.book.get(market);
-                    List<List<String>> bids = (List<List<String>>) bidsAsks.get("bids");
-                    List<List<String>> asks = (List<List<String>>) bidsAsks.get("asks");
-
-                    List<List<String>> bidsInput = (List<List<String>>) responseMap.get("bids");
-                    List<List<String>> asksInput = (List<List<String>>) responseMap.get("asks");
-
-                    if ((int) responseMap.get("nonce") != Integer.parseInt((String) bidsAsks.get("nonce")) + 1) {
-                        restartLocalBook = true;
-                        bitvavo.websocketObject.subscriptionBook(market, this.subscriptionBookHandlerMap.get(market));
+                    break;
+                case "candle":
+                    market = response.getString("market");
+                    String interval = response.getString("interval");
+                    if (this.subscriptionCandlesHandlerMap.get(market) != null
+                            && this.subscriptionCandlesHandlerMap.get(market).get(interval) != null)
+                        this.subscriptionCandlesHandlerMap.get(market).get(interval).handleMessage(response);
+                    break;
+                case "book":
+                    market = response.getString("market");
+                    if (this.subscriptionBookUpdateHandlerMap != null && this.subscriptionBookUpdateHandlerMap.get(market) != null) {
+                        this.subscriptionBookUpdateHandlerMap.get(market).handleMessage(response);
                     }
-                    if (!restartLocalBook) {
-                        bids = sortAndInsert(bidsInput, bids, false);
-                        asks = sortAndInsert(asksInput, asks, true);
-                        bidsAsks.put("bids", bids);
-                        bidsAsks.put("asks", asks);
-                        bidsAsks.put("nonce", Integer.toString((int) responseMap.get("nonce")));
-                        bitvavo.book.put(market, bidsAsks);
+                    if (keepBookCopy && this.subscriptionBookHandlerMap != null
+                            && this.subscriptionBookHandlerMap.get(market) != null) {
+                        Map<String, Object> responseMap = jsonToMap(response);
+                        market = (String) responseMap.get("market");
 
-                        this.subscriptionBookHandlerMap.get(market).handleBook((Map<String, Object>) bitvavo.book.get(market));
+                        Map<String, Object> bidsAsks = (Map<String, Object>) bitvavo.book.get(market);
+                        List<List<String>> bids = (List<List<String>>) bidsAsks.get("bids");
+                        List<List<String>> asks = (List<List<String>>) bidsAsks.get("asks");
+
+                        List<List<String>> bidsInput = (List<List<String>>) responseMap.get("bids");
+                        List<List<String>> asksInput = (List<List<String>>) responseMap.get("asks");
+
+                        if ((int) responseMap.get("nonce") != Integer.parseInt((String) bidsAsks.get("nonce")) + 1) {
+                            bitvavo.websocketObject.subscriptionBook(market, this.subscriptionBookHandlerMap.get(market));
+                        }else{
+                            bids = sortAndInsert(bidsInput, bids, false);
+                            asks = sortAndInsert(asksInput, asks, true);
+                            bidsAsks.put("bids", bids);
+                            bidsAsks.put("asks", asks);
+                            bidsAsks.put("nonce", Integer.toString((int) responseMap.get("nonce")));
+                            bitvavo.book.put(market, bidsAsks);
+
+                            this.subscriptionBookHandlerMap.get(market).handleBook((Map<String, Object>) bitvavo.book.get(market));
+                        }
                     }
-                }
-            } else if (response.getString("event").equals("candle")) {
-                market = response.getString("market");
-                String interval = response.getString("interval");
-                if (this.subscriptionCandlesHandlerMap.get(market) != null
-                        && this.subscriptionCandlesHandlerMap.get(market).get(interval) != null) {
-                    this.subscriptionCandlesHandlerMap.get(market).get(interval).handleMessage(response);
-                }
+                    break;
             }
         } else if (response.has("action")) {
             if (response.getString("action").equals("getTime") && this.timeHandler != null) {

@@ -33,6 +33,7 @@ public class WebsocketSendThread extends Thread {
     }
   }
 
+  @Override
   public void run(){
     sendPrivate(this.options);
   }

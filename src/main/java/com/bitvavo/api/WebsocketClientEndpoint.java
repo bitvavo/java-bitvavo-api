@@ -19,14 +19,13 @@ public class WebsocketClientEndpoint {
     Session userSession = null;
     boolean restartWebsocket = true;
     boolean keepBookCopy;
-    ArrayList<String> nonceArray;
-    HashMap<String, HashMap<String, MessageHandler>> subscriptionCandlesHandlerMap;
-    HashMap<String, MessageHandler> subscriptionAccountHandlerMap;
-    HashMap<String, MessageHandler> subscriptionTickerHandlerMap;
-    HashMap<String, MessageHandler> subscriptionTicker24hHandlerMap;
-    HashMap<String, MessageHandler> subscriptionTradesHandlerMap;
-    HashMap<String, MessageHandler> subscriptionBookUpdateHandlerMap;
-    HashMap<String, BookHandler> subscriptionBookHandlerMap;
+    Map<String, Map<String, MessageHandler>> subscriptionCandlesHandlerMap;
+    Map<String, MessageHandler> subscriptionAccountHandlerMap;
+    Map<String, MessageHandler> subscriptionTickerHandlerMap;
+    Map<String, MessageHandler> subscriptionTicker24hHandlerMap;
+    Map<String, MessageHandler> subscriptionTradesHandlerMap;
+    Map<String, MessageHandler> subscriptionBookUpdateHandlerMap;
+    Map<String, BookHandler> subscriptionBookHandlerMap;
     private MessageHandler messageHandler;
     private MessageHandler timeHandler;
     private MessageHandler marketsHandler;
@@ -300,11 +299,8 @@ public class WebsocketClientEndpoint {
             switch (response.getString("event")) {
                 case "subscribed":
                     JSONObject channel = response.getJSONObject("subscriptions");
-                    StringBuilder subscribedString = new StringBuilder("We are now subscribed to the following channels: ");
-                    for (String key : channel.keySet()) {
-                        subscribedString.append(subscribedString + key + ", ");
-                    }
-                    bitvavo.debugToConsole(subscribedString.substring(0, subscribedString.length() - 2));
+                    String channels = String.join(", ", channel.keySet());
+                    bitvavo.debugToConsole("We are now subscribed to the following channels: " + channels);
                     break;
                 case "authenticate":
                     if (this.authenticateHandler != null)
@@ -355,8 +351,6 @@ public class WebsocketClientEndpoint {
                         market = (String) responseMap.get("market");
 
                         Map<String, Object> bidsAsks = (Map<String, Object>) bitvavo.book.get(market);
-                        List<List<String>> bids = (List<List<String>>) bidsAsks.get("bids");
-                        List<List<String>> asks = (List<List<String>>) bidsAsks.get("asks");
 
                         List<List<String>> bidsInput = (List<List<String>>) responseMap.get("bids");
                         List<List<String>> asksInput = (List<List<String>>) responseMap.get("asks");
@@ -364,6 +358,9 @@ public class WebsocketClientEndpoint {
                         if ((int) responseMap.get("nonce") != Integer.parseInt((String) bidsAsks.get("nonce")) + 1) {
                             bitvavo.websocketObject.subscriptionBook(market, this.subscriptionBookHandlerMap.get(market));
                         }else{
+                            List<List<String>> bids = (List<List<String>>) bidsAsks.get("bids");
+                            List<List<String>> asks = (List<List<String>>) bidsAsks.get("asks");
+
                             bids = sortAndInsert(bidsInput, bids, false);
                             asks = sortAndInsert(asksInput, asks, true);
                             bidsAsks.put("bids", bids);
@@ -558,7 +555,7 @@ public class WebsocketClientEndpoint {
         this.subscriptionTickerHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionTickerHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionTickerHandler(Map<String, MessageHandler> map) {
         this.subscriptionTickerHandlerMap = map;
     }
 
@@ -569,7 +566,7 @@ public class WebsocketClientEndpoint {
         this.subscriptionTicker24hHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionTicker24hHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionTicker24hHandler(Map<String, MessageHandler> map) {
         this.subscriptionTicker24hHandlerMap = map;
     }
 
@@ -580,7 +577,7 @@ public class WebsocketClientEndpoint {
         this.subscriptionAccountHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionAccountHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionAccountHandler(Map<String, MessageHandler> map) {
         this.subscriptionAccountHandlerMap = map;
     }
 
@@ -596,29 +593,29 @@ public class WebsocketClientEndpoint {
         }
     }
 
-    public void copySubscriptionCandlesHandler(HashMap<String, HashMap<String, MessageHandler>> map) {
+    public void copySubscriptionCandlesHandler(Map<String, Map<String, MessageHandler>> map) {
         this.subscriptionCandlesHandlerMap = map;
     }
 
     public void addSubscriptionTradesHandler(String market, MessageHandler msgHandler) {
         if (this.subscriptionTradesHandlerMap == null) {
-            this.subscriptionTradesHandlerMap = new HashMap<String, MessageHandler>();
+            this.subscriptionTradesHandlerMap = new HashMap<>();
         }
         this.subscriptionTradesHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionTradesHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionTradesHandler(Map<String, MessageHandler> map) {
         this.subscriptionTradesHandlerMap = map;
     }
 
     public void addSubscriptionBookUpdateHandler(String market, MessageHandler msgHandler) {
         if (this.subscriptionBookUpdateHandlerMap == null) {
-            this.subscriptionBookUpdateHandlerMap = new HashMap<String, MessageHandler>();
+            this.subscriptionBookUpdateHandlerMap = new HashMap<>();
         }
         this.subscriptionBookUpdateHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionBookUpdateHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionBookUpdateHandler(Map<String, MessageHandler> map) {
         this.subscriptionBookUpdateHandlerMap = map;
     }
 
@@ -628,12 +625,12 @@ public class WebsocketClientEndpoint {
 
     public void addSubscriptionBookHandler(String market, BookHandler msgHandler) {
         if (this.subscriptionBookHandlerMap == null) {
-            this.subscriptionBookHandlerMap = new HashMap<String, BookHandler>();
+            this.subscriptionBookHandlerMap = new HashMap<>();
         }
         this.subscriptionBookHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionBookHandler(HashMap<String, BookHandler> map) {
+    public void copySubscriptionBookHandler(Map<String, BookHandler> map) {
         this.subscriptionBookHandlerMap = map;
     }
 

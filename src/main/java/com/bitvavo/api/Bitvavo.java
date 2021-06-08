@@ -16,6 +16,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -90,7 +92,7 @@ public class Bitvavo {
     try {
       String result = timestamp + method + "/v2" + urlEndpoint;
       if (body.length() != 0) {
-        result = result + body;
+        result = result + bodyToJsonString(body);
       }
       Mac sha256HMAC = Mac.getInstance("HmacSHA256");
       SecretKeySpec secretKey = new SecretKeySpec(this.apiSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
@@ -100,6 +102,19 @@ public class Bitvavo {
       errorToConsole("Caught exception in createSignature " + ex);
       return "";
     }
+  }
+
+  public String bodyToJsonString(JSONObject body) {
+    DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+    df.setMaximumFractionDigits(340);
+    for (String key: body.keySet()) {
+      if (body.get(key) instanceof Double || body.get(key) instanceof Float) {
+        body.put(key, df.format(body.get(key)));
+      }else if (body.get(key) instanceof Long) {
+        body.put(key, body.get(key).toString());
+      }
+    }
+    return body.toString();
   }
 
   public void debugToConsole(String message) {

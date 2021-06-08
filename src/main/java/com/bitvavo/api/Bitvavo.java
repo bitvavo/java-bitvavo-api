@@ -85,7 +85,7 @@ public class Bitvavo {
   }
 
   public String createSignature(long timestamp, String method, String urlEndpoint, JSONObject body) {
-    if (this.apiSecret == null || this.apiKey == null) {
+    if (this.apiSecret.isEmpty() || this.apiKey.isEmpty()) {
       errorToConsole("The API key or secret has not been set. Please pass the key and secret when instantiating the bitvavo object.");
       return "";
     }
@@ -647,7 +647,7 @@ public class Bitvavo {
     }
 
     public void doSendPrivate(JSONObject options) {
-      if (getApiKey() == null) {
+      if (getApiKey().isEmpty()) {
         errorToConsole("You forgot to set the key and secret, both are required for this functionality.");
         return;
       }

@@ -142,7 +142,9 @@ public class Bitvavo {
             long timeToWait = rateLimitReset - System.currentTimeMillis();
             rateLimitThreadStarted = true;
             debugToConsole("We are waiting for " + ((int) timeToWait / 1000) + " seconds, until the rate limit ban will be lifted.");
-            Thread.sleep(timeToWait);
+            if (timeToWait > 0) {
+              Thread.sleep(timeToWait);
+            }
           } catch (InterruptedException ie) {
             errorToConsole("Got interrupted while waiting for the rate limit ban to be lifted.");
           }
@@ -170,7 +172,9 @@ public class Bitvavo {
             long timeToWait = rateLimitReset - System.currentTimeMillis();
             rateLimitThreadStarted = true;
             debugToConsole("We started a thread which waits for " + ((int) timeToWait / 1000) + " seconds, until the rate limit will be reset.");
-            Thread.sleep(timeToWait);
+            if (timeToWait > 0) {
+              Thread.sleep(timeToWait);
+            }
           } catch (InterruptedException ie) {
             errorToConsole("Got interrupted while waiting for the rate limit to be reset.");
           }

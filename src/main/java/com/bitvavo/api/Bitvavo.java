@@ -108,10 +108,9 @@ public class Bitvavo {
     DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
     df.setMaximumFractionDigits(340);
     for (String key: body.keySet()) {
-      if (body.get(key) instanceof Double || body.get(key) instanceof Float) {
-        body.put(key, df.format(body.get(key)));
-      }else if (body.get(key) instanceof Long) {
-        body.put(key, body.get(key).toString());
+      Object value = body.get(key);
+      if (value instanceof Double || value instanceof Float) {
+        body.put(key, Double.valueOf(df.format(value)));
       }
     }
     return body.toString();

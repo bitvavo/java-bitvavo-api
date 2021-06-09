@@ -1,20 +1,16 @@
 package com.bitvavo.api;
 
-import org.json.*;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import javax.websocket.*;
+import java.io.IOException;
 import java.net.URI;
-import javax.websocket.ClientEndpoint;
-import javax.websocket.CloseReason;
-import javax.websocket.ContainerProvider;
-import javax.websocket.OnClose;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-import javax.websocket.OnError;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
-import javax.websocket.PongMessage;
-import java.util.concurrent.TimeUnit;
 import java.util.*;
-import java.io.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @ClientEndpoint
 public class WebsocketClientEndpoint {
@@ -23,7 +19,13 @@ public class WebsocketClientEndpoint {
     Session userSession = null;
     boolean restartWebsocket = true;
     boolean keepBookCopy;
-    ArrayList<String> nonceArray;
+    Map<String, Map<String, MessageHandler>> subscriptionCandlesHandlerMap;
+    Map<String, MessageHandler> subscriptionAccountHandlerMap;
+    Map<String, MessageHandler> subscriptionTickerHandlerMap;
+    Map<String, MessageHandler> subscriptionTicker24hHandlerMap;
+    Map<String, MessageHandler> subscriptionTradesHandlerMap;
+    Map<String, MessageHandler> subscriptionBookUpdateHandlerMap;
+    Map<String, BookHandler> subscriptionBookHandlerMap;
     private MessageHandler messageHandler;
     private MessageHandler timeHandler;
     private MessageHandler marketsHandler;
@@ -50,13 +52,6 @@ public class WebsocketClientEndpoint {
     private MessageHandler withdrawalHistoryHandler;
     private MessageHandler authenticateHandler;
     private MessageHandler errorHandler;
-    HashMap<String, HashMap<String, MessageHandler>> subscriptionCandlesHandlerMap;
-    HashMap<String, MessageHandler> subscriptionAccountHandlerMap;
-    HashMap<String, MessageHandler> subscriptionTickerHandlerMap;
-    HashMap<String, MessageHandler> subscriptionTicker24hHandlerMap;
-    HashMap<String, MessageHandler> subscriptionTradesHandlerMap;
-    HashMap<String, MessageHandler> subscriptionBookUpdateHandlerMap;
-    HashMap<String, BookHandler> subscriptionBookHandlerMap;
 
     public WebsocketClientEndpoint(URI endpointURI, Bitvavo bitv) {
         try {
@@ -70,26 +65,61 @@ public class WebsocketClientEndpoint {
         }
     }
 
+    public static Map<String, Object> jsonToMap(JSONObject json) throws JSONException {
+        if (json != JSONObject.NULL) {
+            return toMap(json);
+        }else{
+            return new HashMap<>();
+        }
+    }
+
+    public static Map<String, Object> toMap(JSONObject object) throws JSONException {
+        Map<String, Object> map = new HashMap<>();
+
+        Iterator<String> keysItr = object.keys();
+        while (keysItr.hasNext()) {
+            String key = keysItr.next();
+            Object value = object.get(key);
+
+            if (value instanceof JSONArray) {
+                value = toList((JSONArray) value);
+            } else if (value instanceof JSONObject) {
+                value = toMap((JSONObject) value);
+            }
+            map.put(key, value);
+        }
+        return map;
+    }
+
+    public static List<Object> toList(JSONArray array) throws JSONException {
+        List<Object> list = new ArrayList<>(array.length());
+        for (int i = 0; i < array.length(); i++) {
+            Object value = array.get(i);
+            if (value instanceof JSONArray) {
+                value = toList((JSONArray) value);
+            } else if (value instanceof JSONObject) {
+                value = toMap((JSONObject) value);
+            }
+            list.add(value);
+        }
+        return list;
+    }
+
     public void retryConnecting(URI endpointURI) {
         bitvavo.debugToConsole("Trying to reconnect.");
         try {
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             container.connectToServer(this, endpointURI);
-        }
-        catch (javax.websocket.DeploymentException e) {
+        } catch (javax.websocket.DeploymentException e) {
             try {
                 TimeUnit.MILLISECONDS.sleep(this.reconnectTimer);
                 this.reconnectTimer = this.reconnectTimer * 2;
                 bitvavo.debugToConsole("We waited for " + this.reconnectTimer / 1000.0 + " seconds");
                 retryConnecting(endpointURI);
-            }
-            catch(InterruptedException err) {
-                return;
-            }
-        }
-        catch (Exception error) {
+            } catch (InterruptedException ex) {}
+        } catch (Exception exception) {
             bitvavo.errorToConsole("unexpected exception caught");
-            throw new RuntimeException(error);
+            throw new RuntimeException(exception);
         }
     }
 
@@ -112,11 +142,10 @@ public class WebsocketClientEndpoint {
         this.userSession = userSession;
         try {
             TimeUnit.MILLISECONDS.sleep(500);
-        }
-        catch(InterruptedException ex) {
+        } catch (InterruptedException ex) {
             bitvavo.errorToConsole(ex.toString());
         }
-        if(bitvavo.getApiKey() != "") {
+        if (!bitvavo.getApiKey().isEmpty()) {
             long timestamp = System.currentTimeMillis();
             JSONObject authenticate = new JSONObject();
             authenticate.put("action", "authenticate");
@@ -126,55 +155,37 @@ public class WebsocketClientEndpoint {
             authenticate.put("window", Integer.toString(bitvavo.window));
             this.sendMessage(authenticate.toString());
         }
-        if(bitvavo.activatedSubscriptionTicker) {
-            Iterator<String> markets = bitvavo.optionsSubscriptionTicker.keys();
-            while(markets.hasNext()) {
-                String market = markets.next();
-                this.sendMessage(bitvavo.optionsSubscriptionTicker.get(market).toString());
-            }
+        if (bitvavo.optionsSubscriptionTicker != null) {
+            bitvavo.optionsSubscriptionTicker.keySet().stream().map(bitvavo.optionsSubscriptionTicker::get)
+                    .forEach(obj -> this.sendMessage(obj.toString()));
         }
-        if(bitvavo.activatedSubscriptionTicker24h) {
-            Iterator<String> markets = bitvavo.optionsSubscriptionTicker24h.keys();
-            while(markets.hasNext()) {
-                String market = markets.next();
-                this.sendMessage(bitvavo.optionsSubscriptionTicker24h.get(market).toString());
-            }
+        if (bitvavo.optionsSubscriptionTicker24h != null) {
+            bitvavo.optionsSubscriptionTicker24h.keySet().stream().map(bitvavo.optionsSubscriptionTicker24h::get)
+                    .forEach(obj -> this.sendMessage(obj.toString()));
         }
         // Account uses a threaded function, since we need a response on authenticate before we can send.
-        if(bitvavo.activatedSubscriptionAccount) {
+        if (bitvavo.optionsSubscriptionAccount != null) {
             WebsocketSendThread websocketSendThread = new WebsocketSendThread(bitvavo.optionsSubscriptionAccount, bitvavo, this);
             websocketSendThread.start();
         }
-        if(bitvavo.activatedSubscriptionCandles) {
-            Iterator<String> markets = bitvavo.optionsSubscriptionCandles.keys();
-            while(markets.hasNext()) {
-                String market = markets.next();
-                JSONObject intervalObject = bitvavo.optionsSubscriptionCandles.getJSONObject(market);
-                Iterator<String> intervals = intervalObject.keys();
-                while(intervals.hasNext()) {
-                    String interval = intervals.next();
-                    this.sendMessage(bitvavo.optionsSubscriptionCandles.getJSONObject(market).get(interval).toString());
-                }
-            }
+        if (bitvavo.optionsSubscriptionCandles != null) {
+            bitvavo.optionsSubscriptionCandles.keySet().stream().map(bitvavo.optionsSubscriptionCandles::getJSONObject)
+                    .forEach(intervalObject -> {
+                        for (String interval : intervalObject.keySet()) {
+                            this.sendMessage(intervalObject.get(interval).toString());
+                        }
+                    });
         }
-        if(bitvavo.activatedSubscriptionTrades) {
-            Iterator<String> markets = bitvavo.optionsSubscriptionTrades.keys();
-            while(markets.hasNext()) {
-                String market = markets.next();
-                this.sendMessage(bitvavo.optionsSubscriptionTrades.get(market).toString());
-            }
+        if (bitvavo.optionsSubscriptionTrades != null) {
+            bitvavo.optionsSubscriptionTrades.keySet().stream().map(bitvavo.optionsSubscriptionTrades::get)
+                    .forEach(obj -> this.sendMessage(obj.toString()));
         }
-        if(bitvavo.activatedSubscriptionBookUpdate) {
-            Iterator<String> markets = bitvavo.optionsSubscriptionBookUpdate.keys();
-            while(markets.hasNext()) {
-                String market = markets.next();
-                this.sendMessage(bitvavo.optionsSubscriptionBookUpdate.get(market).toString());
-            }
+        if (bitvavo.optionsSubscriptionBookUpdate != null) {
+            bitvavo.optionsSubscriptionBookUpdate.keySet().stream().map(bitvavo.optionsSubscriptionBookUpdate::get)
+                    .forEach(obj -> this.sendMessage(obj.toString()));
         }
-        if(bitvavo.activatedSubscriptionBook) {
-            Iterator<String> markets = bitvavo.optionsSubscriptionBookFirst.keys();
-            while(markets.hasNext()) {
-                String market = markets.next();
+        if (bitvavo.optionsSubscriptionBookFirst != null) {
+            for (String market : bitvavo.optionsSubscriptionBookFirst.keySet()) {
                 this.sendMessage(bitvavo.optionsSubscriptionBookFirst.get(market).toString());
                 this.sendMessage(bitvavo.optionsSubscriptionBookSecond.get(market).toString());
             }
@@ -186,11 +197,10 @@ public class WebsocketClientEndpoint {
     public void onError(Session userSession, Throwable error) {
         bitvavo.debugToConsole("We encountered an error: " + error);
         error.printStackTrace();
-
     }
 
     private void copyHandlers(WebsocketClientEndpoint oldCE, WebsocketClientEndpoint newCE) {
-        if(oldCE.keepBookCopy) {
+        if (oldCE.keepBookCopy) {
             newCE.keepBookCopy = true;
         }
         newCE.copySubscriptionTickerHandler(oldCE.subscriptionTickerHandlerMap);
@@ -203,30 +213,23 @@ public class WebsocketClientEndpoint {
     }
 
     @OnClose
-    public void onClose(Session userSession, CloseReason reason) throws IOException {
+    public void onClose(Session userSession, CloseReason reason) {
         bitvavo.debugToConsole("closing websocket " + reason);
         this.userSession = null;
-        if(bitvavo.getRemainingLimit() > 0 && this.restartWebsocket) {
+        if (bitvavo.getRemainingLimit() > 0 && this.restartWebsocket) {
             try {
                 bitvavo.authenticated = false;
                 WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(new URI(bitvavo.wsUrl), bitvavo);
                 copyHandlers(bitvavo.ws, clientEndPoint);
-                clientEndPoint.addAuthenticateHandler(new WebsocketClientEndpoint.MessageHandler() {
-                    public void handleMessage(JSONObject response) {
-                        if(response.has("authenticated")) {
-                            bitvavo.authenticated = true;
-                            bitvavo.debugToConsole("We registered authenticated as true again");
-                        }
+                clientEndPoint.addAuthenticateHandler(response -> {
+                    if (response.has("authenticated")) {
+                        bitvavo.authenticated = true;
+                        bitvavo.debugToConsole("We registered authenticated as true again");
                     }
                 });
-                clientEndPoint.addMessageHandler(new WebsocketClientEndpoint.MessageHandler() {
-                    public void handleMessage(JSONObject response) {
-                        bitvavo.errorToConsole("Unexpected message: " + response);
-                    }
-                });
+                clientEndPoint.addMessageHandler(response -> bitvavo.errorToConsole("Unexpected message: " + response));
                 bitvavo.ws = clientEndPoint;
-            }
-            catch(Exception ex) {
+            } catch (Exception ex) {
                 bitvavo.errorToConsole("We caught exception in reconnecting!" + ex);
             }
         } else {
@@ -238,72 +241,27 @@ public class WebsocketClientEndpoint {
         }
     }
 
-    public static Map<String, Object> jsonToMap(JSONObject json) throws JSONException {
-        Map<String, Object> returnMap = new HashMap<String, Object>();
-
-        if(json != JSONObject.NULL) {
-            returnMap = toMap(json);
-        }
-        return returnMap;
-    }
-
-    public static Map<String, Object> toMap(JSONObject object) throws JSONException {
-        Map<String, Object> map = new HashMap<String, Object>();
-
-        Iterator<String> keysItr = object.keys();
-        while(keysItr.hasNext()) {
-            String key = keysItr.next();
-            Object value = object.get(key);
-
-            if(value instanceof JSONArray) {
-                value = toList((JSONArray) value);
-            }
-
-            else if(value instanceof JSONObject) {
-                value = toMap((JSONObject) value);
-            }
-            map.put(key, value);
-        }
-        return map;
-    }
-
-    public static List<Object> toList(JSONArray array) throws JSONException {
-        List<Object> list = new ArrayList<Object>();
-        for(int i = 0; i < array.length(); i++) {
-            Object value = array.get(i);
-            if(value instanceof JSONArray) {
-                value = toList((JSONArray) value);
-            }
-
-            else if(value instanceof JSONObject) {
-                value = toMap((JSONObject) value);
-            }
-            list.add(value);
-        }
-        return list;
-    }
-
     private List<List<String>> sortAndInsert(List<List<String>> update, List<List<String>> book, boolean asksCompare) {
-        for(int i = 0; i < update.size(); i++) {
+        for (int i = 0; i < update.size(); i++) {
             boolean updateSet = false;
             List<String> updateEntry = update.get(i);
-            for(int j = 0; j < book.size(); j++) {
+            for (int j = 0; j < book.size(); j++) {
                 List<String> bookItem = book.get(j);
-                if(asksCompare) {
-                    if(Float.parseFloat(updateEntry.get(0)) < Float.parseFloat(bookItem.get(0))) {
+                if (asksCompare) {
+                    if (Float.parseFloat(updateEntry.get(0)) < Float.parseFloat(bookItem.get(0))) {
                         book.add(j, updateEntry);
                         updateSet = true;
                         break;
                     }
                 } else {
-                    if(Float.parseFloat(updateEntry.get(0)) > Float.parseFloat(bookItem.get(0))) {
+                    if (Float.parseFloat(updateEntry.get(0)) > Float.parseFloat(bookItem.get(0))) {
                         book.add(j, updateEntry);
                         updateSet = true;
                         break;
                     }
                 }
-                if(Float.parseFloat(bookItem.get(0)) == Float.parseFloat(updateEntry.get(0))) {
-                    if(Float.parseFloat(updateEntry.get(1)) > 0.0) {
+                if (Float.parseFloat(bookItem.get(0)) == Float.parseFloat(updateEntry.get(0))) {
+                    if (Float.parseFloat(updateEntry.get(1)) > 0.0) {
                         book.set(j, updateEntry);
                         updateSet = true;
                         break;
@@ -314,7 +272,7 @@ public class WebsocketClientEndpoint {
                     }
                 }
             }
-            if(updateSet == false) {
+            if (!updateSet) {
                 book.add(updateEntry);
             }
         }
@@ -327,262 +285,169 @@ public class WebsocketClientEndpoint {
         String market;
         JSONObject response = new JSONObject(message);
         bitvavo.debugToConsole("FULLRESPONSE: " + response);
-        if(response.has("error")) {
+        if (response.has("error")) {
             bitvavo.errorRateLimit(response);
-            if(this.errorHandler != null) {
+            if (this.errorHandler != null) {
                 this.errorHandler.handleMessage(response);
                 return;
             }
         }
-        if(response.has("event")) {
-            if(response.getString("event").equals("subscribed")) {
-                JSONObject channel = response.getJSONObject("subscriptions");
-                String subscribedString = "We are now subscribed to the following channels: ";
-                Iterator<String> keys = channel.keys();
-                while(keys.hasNext()) {
-                    String key = keys.next();
-                    subscribedString = subscribedString + key + ", ";
-                }
-                bitvavo.debugToConsole(subscribedString.substring(0, subscribedString.length() - 2));
-            }
-            else if(response.getString("event").equals("authenticate")) {
-                if (this.authenticateHandler != null) {
-                    this.authenticateHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("event").equals("trade")) {
-                market = response.getString("market");
-                if (this.subscriptionTradesHandlerMap != null) {
-                    if(this.subscriptionTradesHandlerMap.get(market) != null) {
-                        this.subscriptionTradesHandlerMap.get(market).handleMessage(response);
-                    }
-                }
-            }
-            else if (response.getString("event").equals("fill")) {
-                market = response.getString("market");
-                if (this.subscriptionAccountHandlerMap != null) {
-                    if(this.subscriptionAccountHandlerMap.get(market) != null) {
-                        this.subscriptionAccountHandlerMap.get(market).handleMessage(response);
-                    }
-                }
-            }
-            else if (response.getString("event").equals("order")) {
-                market = response.getString("market");
-                if (this.subscriptionAccountHandlerMap != null) {
-                    if(this.subscriptionAccountHandlerMap.get(market) != null) {
-                        this.subscriptionAccountHandlerMap.get(market).handleMessage(response);
-                    }
-                }
-            }
-            else if (response.getString("event").equals("ticker")) {
-                market = response.getString("market");
-                if (this.subscriptionTickerHandlerMap != null) {
-                    if(this.subscriptionTickerHandlerMap.get(market) != null) {
-                        this.subscriptionTickerHandlerMap.get(market).handleMessage(response);
-                    }
-                }
-            }
-            else if (response.getString("event").equals("ticker24h")) {
-                JSONArray data = response.getJSONArray("data");
-                if (this.subscriptionTicker24hHandlerMap != null) {
-                    for (int i = 0; i < data.length(); i++) {
-                        JSONObject ticker = data.getJSONObject(i);
-                        market = ticker.getString("market");
-                        if (this.subscriptionTicker24hHandlerMap.get(market) != null) {
-                            this.subscriptionTicker24hHandlerMap.get(market).handleMessage(ticker);
+        if (response.has("event")) {
+            MessageHandler handler;
+            switch (response.getString("event")) {
+                case "subscribed":
+                    JSONObject channel = response.getJSONObject("subscriptions");
+                    String channels = String.join(", ", channel.keySet());
+                    bitvavo.debugToConsole("We are now subscribed to the following channels: " + channels);
+                    break;
+                case "authenticate":
+                    if (this.authenticateHandler != null)
+                        this.authenticateHandler.handleMessage(response);
+                    break;
+                case "trade":
+                    market = response.getString("market");
+                    handler = this.subscriptionTradesHandlerMap.get(market);
+                    if (this.subscriptionTradesHandlerMap != null && handler != null)
+                        handler.handleMessage(response);
+                    break;
+                case "fill":
+                case "order":
+                    market = response.getString("market");
+                    handler = this.subscriptionAccountHandlerMap.get(market);
+                    if (this.subscriptionAccountHandlerMap != null && handler != null)
+                        handler.handleMessage(response);
+                    break;
+                case "ticker":
+                    market = response.getString("market");
+                    handler = this.subscriptionTickerHandlerMap.get(market);
+                    if (this.subscriptionTickerHandlerMap != null && handler != null)
+                        handler.handleMessage(response);
+                    break;
+                case "ticker24h":
+                    JSONArray data = response.getJSONArray("data");
+                    if (this.subscriptionTicker24hHandlerMap != null) {
+                        for (JSONObject ticker : IntStream.of(data.length())
+                                .mapToObj(data::getJSONObject).collect(Collectors.toList())) {
+                            market = ticker.getString("market");
+                            handler = this.subscriptionTicker24hHandlerMap.get(market);
+                            if (handler != null)
+                                handler.handleMessage(ticker);
                         }
                     }
-                }
-            }
-            else if (response.getString("event").equals("book")) {
-                market = response.getString("market");
-                if (this.subscriptionBookUpdateHandlerMap != null) {
-                    if(this.subscriptionBookUpdateHandlerMap.get(market) != null) {
-                        this.subscriptionBookUpdateHandlerMap.get(market).handleMessage(response);
+                    break;
+                case "candle":
+                    market = response.getString("market");
+                    String interval = response.getString("interval");
+                    Map<String, MessageHandler> subscriptionCandlesHandler = this.subscriptionCandlesHandlerMap.get(market);
+                    handler = subscriptionCandlesHandler.get(interval);
+                    if (subscriptionCandlesHandler != null && handler != null)
+                        handler.handleMessage(response);
+                    break;
+                case "book":
+                    market = response.getString("market");
+                    handler = this.subscriptionBookUpdateHandlerMap.get(market);
+                    if (this.subscriptionBookUpdateHandlerMap != null && handler != null) {
+                        handler.handleMessage(response);
                     }
-                }
-                if (keepBookCopy) {
-                    if(this.subscriptionBookHandlerMap != null) {
-                        if(this.subscriptionBookHandlerMap.get(market) != null) {
-                            Map<String, Object> responseMap = jsonToMap(response);
-                            market = (String)responseMap.get("market");
-                            boolean restartLocalBook = false;
+                    BookHandler bookHandler = this.subscriptionBookHandlerMap.get(market);
+                    if (keepBookCopy && this.subscriptionBookHandlerMap != null && bookHandler != null) {
+                        Map<String, Object> responseMap = jsonToMap(response);
+                        market = (String) responseMap.get("market");
 
-                            Map<String, Object> bidsAsks = (Map<String, Object>)bitvavo.book.get(market);
-                            List<List<String>> bids = (List<List<String>>)bidsAsks.get("bids");
-                            List<List<String>> asks = (List<List<String>>)bidsAsks.get("asks");
-                            
-                            List<List<String>> bidsInput = (List<List<String>>)responseMap.get("bids");
-                            List<List<String>> asksInput = (List<List<String>>)responseMap.get("asks");
+                        Map<String, Object> bidsAsks = (Map<String, Object>) bitvavo.book.get(market);
 
-                            if( (int)responseMap.get("nonce") != Integer.parseInt((String)bidsAsks.get("nonce")) + 1) {
-                                restartLocalBook = true;
-                                bitvavo.websocketObject.subscriptionBook(market, this.subscriptionBookHandlerMap.get(market));
-                            }
-                            if(!restartLocalBook) {
-                                bids = sortAndInsert(bidsInput, bids, false);
-                                asks = sortAndInsert(asksInput, asks, true);
-                                bidsAsks.put("bids", bids);
-                                bidsAsks.put("asks", asks);
-                                bidsAsks.put("nonce", Integer.toString((int)responseMap.get("nonce")));
-                                bitvavo.book.put(market, bidsAsks);
-                            
-                                this.subscriptionBookHandlerMap.get(market).handleBook((Map<String, Object>)bitvavo.book.get(market));
-                            }
+                        List<List<String>> bidsInput = (List<List<String>>) responseMap.get("bids");
+                        List<List<String>> asksInput = (List<List<String>>) responseMap.get("asks");
+
+                        if ((int) responseMap.get("nonce") != Integer.parseInt((String) bidsAsks.get("nonce")) + 1) {
+                            bitvavo.websocketObject.subscriptionBook(market, bookHandler);
+                        }else{
+                            List<List<String>> bids = (List<List<String>>) bidsAsks.get("bids");
+                            List<List<String>> asks = (List<List<String>>) bidsAsks.get("asks");
+
+                            bids = sortAndInsert(bidsInput, bids, false);
+                            asks = sortAndInsert(asksInput, asks, true);
+                            bidsAsks.put("bids", bids);
+                            bidsAsks.put("asks", asks);
+                            bidsAsks.put("nonce", Integer.toString((int) responseMap.get("nonce")));
+                            bitvavo.book.put(market, bidsAsks);
+
+                            bookHandler.handleBook((Map<String, Object>) bitvavo.book.get(market));
                         }
                     }
-                }
+                    break;
             }
-            else if (response.getString("event").equals("candle")) {
-                market = response.getString("market");
-                String interval = response.getString("interval");
-                if (this.subscriptionCandlesHandlerMap.get(market) != null) {
-                    if(this.subscriptionCandlesHandlerMap.get(market).get(interval) != null) {
-                        this.subscriptionCandlesHandlerMap.get(market).get(interval).handleMessage(response);
-                    }
-                }
-            }
-        }
-        else if(response.has("action")) {
-            if(response.getString("action").equals("getTime")) {
-                if (this.timeHandler != null) {
-                    this.timeHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("getMarkets")) {
-                if (this.marketsHandler != null) {
-                    this.marketsHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("getAssets")) {
-                if (this.assetsHandler != null) {
-                    this.assetsHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("getBook")) {
+        } else if (response.has("action")) {
+            if (response.getString("action").equals("getTime") && this.timeHandler != null) {
+                this.timeHandler.handleMessage(response);
+            } else if (response.getString("action").equals("getMarkets") && this.marketsHandler != null) {
+                this.marketsHandler.handleMessage(response);
+            } else if (response.getString("action").equals("getAssets") && this.assetsHandler != null) {
+                this.assetsHandler.handleMessage(response);
+            } else if (response.getString("action").equals("getBook")) {
                 if (this.bookHandler != null) {
                     this.bookHandler.handleMessage(response);
                 }
-                if (keepBookCopy) {
-                    if(this.subscriptionBookHandlerMap != null) {
-                        market = response.getJSONObject("response").getString("market");
-                        if(this.subscriptionBookHandlerMap.get(market) != null) {
-                            Map<String, Object> bidsAsks = (Map<String, Object>)bitvavo.book.get(market);
-                            List<List<String>> bids = (List<List<String>>)bidsAsks.get("bids");
-                            List<List<String>> asks = (List<List<String>>)bidsAsks.get("asks");
+                if (keepBookCopy && this.subscriptionBookHandlerMap != null) {
+                    market = response.getJSONObject("response").getString("market");
+                    if (this.subscriptionBookHandlerMap.get(market) != null) {
+                        Map<String, Object> bidsAsks = (Map<String, Object>) bitvavo.book.get(market);
+                        List<List<String>> bids = (List<List<String>>) bidsAsks.get("bids");
+                        List<List<String>> asks = (List<List<String>>) bidsAsks.get("asks");
 
-                            Map<String, Object> bookentry = jsonToMap(response.getJSONObject("response"));
+                        Map<String, Object> bookentry = jsonToMap(response.getJSONObject("response"));
 
-                            List<List<String>> bidsInput = (List<List<String>>)bookentry.get("bids");
-                            List<List<String>> asksInput = (List<List<String>>)bookentry.get("asks");
+                        List<List<String>> bidsInput = (List<List<String>>) bookentry.get("bids");
+                        List<List<String>> asksInput = (List<List<String>>) bookentry.get("asks");
 
-                            bidsAsks.put("bids", bidsInput);
-                            bidsAsks.put("asks", asksInput);
-                            bidsAsks.put("nonce", Integer.toString(response.getJSONObject("response").getInt("nonce")));
-                            bitvavo.book.put(market, bidsAsks);
-                        
-                            this.subscriptionBookHandlerMap.get(market).handleBook((Map<String, Object>)bitvavo.book.get(market));
-                        }
+                        bidsAsks.put("bids", bidsInput);
+                        bidsAsks.put("asks", asksInput);
+                        bidsAsks.put("nonce", Integer.toString(response.getJSONObject("response").getInt("nonce")));
+                        bitvavo.book.put(market, bidsAsks);
+
+                        this.subscriptionBookHandlerMap.get(market).handleBook((Map<String, Object>) bitvavo.book.get(market));
                     }
                 }
+            } else if (response.getString("action").equals("getTrades") && this.tradesHandler != null) {
+                this.tradesHandler.handleMessage(response);
+            } else if (response.getString("action").equals("getCandles") && this.candlesHandler != null) {
+                this.candlesHandler.handleMessage(response);
+            } else if (response.getString("action").equals("getTicker24h") && this.ticker24hHandler != null) {
+                this.ticker24hHandler.handleMessage(response);
+            } else if (response.getString("action").equals("getTickerPrice") && this.tickerPriceHandler != null) {
+                this.tickerPriceHandler.handleMessage(response);
+            } else if (response.getString("action").equals("getTickerBook") && this.tickerBookHandler != null) {
+                this.tickerBookHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateCreateOrder") && this.createOrderHandler != null) {
+                this.createOrderHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateGetOrder") && this.getOrderHandler != null) {
+                this.getOrderHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateUpdateOrder") && this.updateOrderHandler != null) {
+                this.updateOrderHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateCancelOrder") && this.cancelOrderHandler != null) {
+                this.cancelOrderHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateGetOrders") && this.getOrdersHandler != null) {
+                this.getOrdersHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateCancelOrders") && this.cancelOrdersHandler != null) {
+                this.cancelOrdersHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateGetOrdersOpen") && this.getOrdersOpenHandler != null) {
+                this.getOrdersOpenHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateGetTrades") && this.getTradesHandler != null) {
+                this.getTradesHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateGetAccount") && this.getAccountHandler != null) {
+                this.getAccountHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateGetBalance") && this.balanceHandler != null) {
+                this.balanceHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateDepositAssets") && this.depositAssetsHandler != null) {
+                this.depositAssetsHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateWithdrawAssets") && this.withdrawAssetsHandler != null) {
+                this.withdrawAssetsHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateGetDepositHistory") && this.depositHistoryHandler != null) {
+                this.depositHistoryHandler.handleMessage(response);
+            } else if (response.getString("action").equals("privateGetWithdrawalHistory") && this.withdrawalHistoryHandler != null) {
+                this.withdrawalHistoryHandler.handleMessage(response);
             }
-            else if(response.getString("action").equals("getTrades")) {
-                if (this.tradesHandler != null) {
-                    this.tradesHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("getCandles")) {
-                if (this.candlesHandler != null) {
-                    this.candlesHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("getTicker24h")) {
-                if (this.ticker24hHandler != null) {
-                    this.ticker24hHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("getTickerPrice")) {
-                if (this.tickerPriceHandler != null) {
-                    this.tickerPriceHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("getTickerBook")) {
-                if (this.tickerBookHandler != null) {
-                    this.tickerBookHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateCreateOrder")) {
-                if (this.createOrderHandler != null) {
-                    this.createOrderHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateGetOrder")) {
-                if (this.getOrderHandler != null) {
-                    this.getOrderHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateUpdateOrder")) {
-                if (this.updateOrderHandler != null) {
-                    this.updateOrderHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateCancelOrder")) {
-                if (this.cancelOrderHandler != null) {
-                    this.cancelOrderHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateGetOrders")) {
-                if (this.getOrdersHandler != null) {
-                    this.getOrdersHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateCancelOrders")) {
-                if (this.cancelOrdersHandler != null) {
-                    this.cancelOrdersHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateGetOrdersOpen")) {
-                if (this.getOrdersOpenHandler != null) {
-                    this.getOrdersOpenHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateGetTrades")) {
-                if (this.getTradesHandler != null) {
-                    this.getTradesHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateGetAccount")) {
-                if (this.getAccountHandler != null) {
-                    this.getAccountHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateGetBalance")) {
-                if(this.balanceHandler != null) {
-                    this.balanceHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateDepositAssets")) {
-                if(this.depositAssetsHandler != null) {
-                    this.depositAssetsHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateWithdrawAssets")) {
-                if(this.withdrawAssetsHandler != null) {
-                    this.withdrawAssetsHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateGetDepositHistory")) {
-                if(this.depositHistoryHandler != null) {
-                    this.depositHistoryHandler.handleMessage(response);
-                }
-            }
-            else if(response.getString("action").equals("privateGetWithdrawalHistory")) {
-                if(this.withdrawalHistoryHandler != null) {
-                    this.withdrawalHistoryHandler.handleMessage(response);
-                }
-            }
-        }
-        else if (this.messageHandler != null) {
+        } else if (this.messageHandler != null) {
             this.messageHandler.handleMessage(response);
         }
     }
@@ -688,73 +553,73 @@ public class WebsocketClientEndpoint {
     }
 
     public void addSubscriptionTickerHandler(String market, MessageHandler msgHandler) {
-        if(this.subscriptionTickerHandlerMap == null) {
-            this.subscriptionTickerHandlerMap = new HashMap<String, MessageHandler>();
+        if (this.subscriptionTickerHandlerMap == null) {
+            this.subscriptionTickerHandlerMap = new HashMap<>();
         }
         this.subscriptionTickerHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionTickerHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionTickerHandler(Map<String, MessageHandler> map) {
         this.subscriptionTickerHandlerMap = map;
     }
 
     public void addSubscriptionTicker24hHandler(String market, MessageHandler msgHandler) {
-        if(this.subscriptionTicker24hHandlerMap == null) {
-            this.subscriptionTicker24hHandlerMap = new HashMap<String, MessageHandler>();
+        if (this.subscriptionTicker24hHandlerMap == null) {
+            this.subscriptionTicker24hHandlerMap = new HashMap<>();
         }
         this.subscriptionTicker24hHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionTicker24hHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionTicker24hHandler(Map<String, MessageHandler> map) {
         this.subscriptionTicker24hHandlerMap = map;
     }
 
     public void addSubscriptionAccountHandler(String market, MessageHandler msgHandler) {
-        if(this.subscriptionAccountHandlerMap == null) {
-            this.subscriptionAccountHandlerMap = new HashMap<String, MessageHandler>();
+        if (this.subscriptionAccountHandlerMap == null) {
+            this.subscriptionAccountHandlerMap = new HashMap<>();
         }
         this.subscriptionAccountHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionAccountHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionAccountHandler(Map<String, MessageHandler> map) {
         this.subscriptionAccountHandlerMap = map;
     }
 
     public void addSubscriptionCandlesHandler(String market, String interval, MessageHandler msgHandler) {
-        if(this.subscriptionCandlesHandlerMap == null) {
-            this.subscriptionCandlesHandlerMap = new HashMap<String, HashMap<String, MessageHandler>>();
+        if (this.subscriptionCandlesHandlerMap == null) {
+            this.subscriptionCandlesHandlerMap = new HashMap<>();
         }
-        if(this.subscriptionCandlesHandlerMap.get(market) != null) {
+        if (this.subscriptionCandlesHandlerMap.get(market) != null) {
             this.subscriptionCandlesHandlerMap.get(market).put(interval, msgHandler);
         } else {
-            this.subscriptionCandlesHandlerMap.put(market, new HashMap<String, MessageHandler>());
+            this.subscriptionCandlesHandlerMap.put(market, new HashMap<>());
             this.subscriptionCandlesHandlerMap.get(market).put(interval, msgHandler);
         }
     }
 
-    public void copySubscriptionCandlesHandler(HashMap<String, HashMap<String, MessageHandler>> map) {
+    public void copySubscriptionCandlesHandler(Map<String, Map<String, MessageHandler>> map) {
         this.subscriptionCandlesHandlerMap = map;
     }
 
     public void addSubscriptionTradesHandler(String market, MessageHandler msgHandler) {
-        if(this.subscriptionTradesHandlerMap == null) {
-            this.subscriptionTradesHandlerMap = new HashMap<String, MessageHandler>();
+        if (this.subscriptionTradesHandlerMap == null) {
+            this.subscriptionTradesHandlerMap = new HashMap<>();
         }
         this.subscriptionTradesHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionTradesHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionTradesHandler(Map<String, MessageHandler> map) {
         this.subscriptionTradesHandlerMap = map;
     }
 
     public void addSubscriptionBookUpdateHandler(String market, MessageHandler msgHandler) {
-        if(this.subscriptionBookUpdateHandlerMap == null) {
-            this.subscriptionBookUpdateHandlerMap = new HashMap<String, MessageHandler>();
+        if (this.subscriptionBookUpdateHandlerMap == null) {
+            this.subscriptionBookUpdateHandlerMap = new HashMap<>();
         }
         this.subscriptionBookUpdateHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionBookUpdateHandler(HashMap<String, MessageHandler> map) {
+    public void copySubscriptionBookUpdateHandler(Map<String, MessageHandler> map) {
         this.subscriptionBookUpdateHandlerMap = map;
     }
 
@@ -763,13 +628,13 @@ public class WebsocketClientEndpoint {
     }
 
     public void addSubscriptionBookHandler(String market, BookHandler msgHandler) {
-        if(this.subscriptionBookHandlerMap == null) {
-            this.subscriptionBookHandlerMap = new HashMap<String, BookHandler>();
+        if (this.subscriptionBookHandlerMap == null) {
+            this.subscriptionBookHandlerMap = new HashMap<>();
         }
         this.subscriptionBookHandlerMap.put(market, msgHandler);
     }
 
-    public void copySubscriptionBookHandler(HashMap<String, BookHandler> map) {
+    public void copySubscriptionBookHandler(Map<String, BookHandler> map) {
         this.subscriptionBookHandlerMap = map;
     }
 

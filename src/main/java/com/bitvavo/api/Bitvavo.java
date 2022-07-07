@@ -211,8 +211,8 @@ public class Bitvavo {
   }
 
   public void updateRateLimit(Map<String,List<String>> response) {
-    String remainingHeader = response.get("Bitvavo-Ratelimit-Remaining").get(0);
-    String resetHeader = response.get("Bitvavo-Ratelimit-ResetAt").get(0);
+    String remainingHeader = response.get("bitvavo-ratelimit-remaining").get(0);
+    String resetHeader = response.get("bitvavo-ratelimit-resetat").get(0);
     if(remainingHeader != null) {
       rateLimitRemaining = Integer.parseInt(remainingHeader);
     }
@@ -252,11 +252,11 @@ public class Bitvavo {
       HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
 
       httpsCon.setRequestMethod(method);
-      httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
-      httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
-      httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
-      httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
-      httpsCon.setRequestProperty("Content-Type", "application/json");
+      httpsCon.setRequestProperty("bitvavo-access-key", this.apiKey);
+      httpsCon.setRequestProperty("bitvavo-access-signature", signature);
+      httpsCon.setRequestProperty("bitvavo-access-timestamp", String.valueOf(timestamp));
+      httpsCon.setRequestProperty("bitvavo-access-window", String.valueOf(this.window));
+      httpsCon.setRequestProperty("content-type", "application/json");
       if(body.length() != 0) {
         httpsCon.setDoOutput(true);
         OutputStreamWriter outputStreamWriter = new OutputStreamWriter(httpsCon.getOutputStream());
@@ -299,11 +299,11 @@ public class Bitvavo {
       HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
 
       httpsCon.setRequestMethod(method);
-      httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
-      httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
-      httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
-      httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
-      httpsCon.setRequestProperty("Content-Type", "application/json");
+      httpsCon.setRequestProperty("bitvavo-access-key", this.apiKey);
+      httpsCon.setRequestProperty("bitvavo-access-signature", signature);
+      httpsCon.setRequestProperty("bitvavo-access-timestamp", String.valueOf(timestamp));
+      httpsCon.setRequestProperty("bitvavo-access-window", String.valueOf(this.window));
+      httpsCon.setRequestProperty("content-type", "application/json");
       if(body.length() != 0) {
         httpsCon.setDoOutput(true);
         OutputStreamWriter outputStreamWriter = new OutputStreamWriter(httpsCon.getOutputStream());
@@ -349,11 +349,11 @@ public class Bitvavo {
       if (this.apiKey != "") {
         long timestamp = System.currentTimeMillis();
         String signature = createSignature(timestamp, method, urlString.replace(this.restUrl, ""), new JSONObject());
-        httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
-        httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
-        httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
-        httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
-        httpsCon.setRequestProperty("Content-Type", "application/json");
+        httpsCon.setRequestProperty("bitvavo-access-key", this.apiKey);
+        httpsCon.setRequestProperty("bitvavo-access-signature", signature);
+        httpsCon.setRequestProperty("bitvavo-access-timestamp", String.valueOf(timestamp));
+        httpsCon.setRequestProperty("bitvavo-access-window", String.valueOf(this.window));
+        httpsCon.setRequestProperty("content-type", "application/json");
       }
       int responseCode = httpsCon.getResponseCode();
       InputStream inputStream;
@@ -388,11 +388,11 @@ public class Bitvavo {
       if (this.apiKey != "") {
         long timestamp = System.currentTimeMillis();
         String signature = createSignature(timestamp, method, urlString.replace(this.restUrl, ""), new JSONObject());
-        httpsCon.setRequestProperty("Bitvavo-Access-Key", this.apiKey);
-        httpsCon.setRequestProperty("Bitvavo-Access-Signature", signature);
-        httpsCon.setRequestProperty("Bitvavo-Access-Timestamp", String.valueOf(timestamp));
-        httpsCon.setRequestProperty("Bitvavo-Access-Window", String.valueOf(this.window));
-        httpsCon.setRequestProperty("Content-Type", "application/json");
+        httpsCon.setRequestProperty("bitvavo-access-key", this.apiKey);
+        httpsCon.setRequestProperty("bitvavo-access-signature", signature);
+        httpsCon.setRequestProperty("bitvavo-access-timestamp", String.valueOf(timestamp));
+        httpsCon.setRequestProperty("bitvavo-access-window", String.valueOf(this.window));
+        httpsCon.setRequestProperty("content-type", "application/json");
       }
       int responseCode = httpsCon.getResponseCode();
       InputStream inputStream;

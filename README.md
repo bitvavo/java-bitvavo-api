@@ -1,6 +1,6 @@
 <p align="center">
   <br>
-  <a href="https://bitvavo.com"><img src="https://bitvavo.com/assets/static/ext/logo-shape.svg" width="100" title="Bitvavo Logo"></a>
+  <a href="https://bitvavo.com"><img src="https://support.bitvavo.com/hc/theming_assets/01HZPGAY4SGG08N1BMWA1SG195" width="100" title="Bitvavo Logo"></a>
 </p>
 
 # Java Bitvavo Api
@@ -56,15 +56,12 @@ Place dependency in your project to start using the SDK:
 <dependency>
   <groupId>com.bitvavo.api</groupId>
   <artifactId>api</artifactId>
-  <version>1.0</version>
+  <version>1.1</version>
 </dependency> 
 ```
 
-Or you can use the example as starting point for your own project. Create a new project with the above dependency and place the example.java file in the src/main/java folder. Install through `mvn clean install` and run the example:
+See the BitvavoTest class as a starting point for your own project.
 
-`
-mvn exec:java "-Dexec.mainClass=com.bitvavo.api.example.example"
-`
 
 ## Rate Limiting
 

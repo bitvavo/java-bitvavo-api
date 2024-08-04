@@ -1,11 +1,11 @@
-package com.bitvavo.api.example;
+package com.bitvavo.api;
 
-import com.bitvavo.api.*;
 import org.json.*;
-import java.util.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /*
- * This is an example utilising all functions of the node Bitvavo API wrapper.
+ * This is an example (test) utilising all functions of the Java Bitvavo API wrapper.
  * The APIKEY and APISECRET should be replaced by your own key and secret.
  * For public functions the APIKEY and SECRET can be removed.
  * Documentation: https://docs.bitvavo.com
@@ -13,25 +13,30 @@ import java.util.*;
  * README: https://github.com/bitvavo/java-bitvavo-api
  */
 
-class example{
-  public static void main(String args[]){
-    Bitvavo bitvavo = new Bitvavo(new JSONObject("{" + 
-        "APIKEY: '<APIKEY>', " +
-        "APISECRET: '<APISECRET>', " +
-        "RESTURL: 'https://api.bitvavo.com/v2'," +
-        "WSURL: 'wss://ws.bitvavo.com/v2/'," +
-        "ACCESSWINDOW: 10000, " +
-        "DEBUGGING: false }"));
+class BitvavoTest {
+  private static Bitvavo bitvavo;
 
-    testREST(bitvavo);
-    testWebsocket(bitvavo);
+  @BeforeAll
+  static void prepare() {
+
+    bitvavo = new Bitvavo(new JSONObject("""
+            {\
+            APIKEY: '<APIKEY>', \
+            APISECRET: '<APISECRET>', \
+            RESTURL: 'https://api.bitvavo.com/v2',\
+            WSURL: 'wss://ws.bitvavo.com/v2/',\
+            ACCESSWINDOW: 10000, \
+            DEBUGGING: false\
+            }"""));
   }
 
-  public static void testREST(Bitvavo bitvavo) {
+  @Test
+  void testREST() {
     JSONArray response;
 
     int remaining = bitvavo.getRemainingLimit();
     System.out.println("remaining limit is " + remaining);
+    System.out.println("time " + bitvavo.time());
 
     // response = bitvavo.markets(new JSONObject());
     // for(int i = 0; i < response.length(); i ++) {
@@ -73,13 +78,13 @@ class example{
     // System.out.println(bitvavo.placeOrder("BTC-EUR", "sell", "limit", new JSONObject("{ amount: 0.1, price: 4000 }")).toString(2));
 
     // System.out.println(bitvavo.placeOrder("BTC-EUR", "sell", "stopLoss", new JSONObject("{ amount: 0.1, triggerType: price, triggerReference: lastTrade, triggerAmount: 5000 }")).toString(2));
-    
+
     // System.out.println(bitvavo.getOrder("BTC-EUR", "afa9da1c-edb9-4245-9271-3549147845a1").toString(2));
 
     // System.out.println(bitvavo.updateOrder("BTC-EUR", "afa9da1c-edb9-4245-9271-3549147845a1", new JSONObject("{ amount: 0.2 }")).toString(2));
 
     // System.out.println(bitvavo.cancelOrder("BTC-EUR", "afa9da1c-edb9-4245-9271-3549147845a1").toString(2));
-    
+
     // response = bitvavo.getOrders("BTC-EUR", new JSONObject());
     // for(int i = 0; i < response.length(); i ++) {
     //   System.out.println(response.getJSONObject(i).toString(2));
@@ -89,12 +94,12 @@ class example{
     // for(int i = 0; i < response.length(); i ++) {
     //   System.out.println(response.getJSONObject(i).toString(2));
     // }
-    
+
     // response = bitvavo.ordersOpen(new JSONObject("{ market: BTC-EUR }"));
     // for(int i = 0; i < response.length(); i ++) {
     //   System.out.println(response.getJSONObject(i).toString(2));
     // }
-    
+
     // response = bitvavo.trades("BTC-EUR", new JSONObject());
     // for(int i = 0; i < response.length(); i ++) {
     //   System.out.println(response.getJSONObject(i).toString(2));
@@ -122,20 +127,13 @@ class example{
     // }
   }
 
-  public static void testWebsocket(Bitvavo bitvavo) {
+  @Test
+  void testWebsocket() {
     Bitvavo.Websocket ws = bitvavo.newWebsocket();
 
-    ws.setErrorCallback(new WebsocketClientEndpoint.MessageHandler() {
-      public void handleMessage(JSONObject response) {
-        System.out.println("Found ERROR, own callback." + response);
-      }
-    });
+    ws.setErrorCallback(response -> System.out.println("Found ERROR, own callback." + response));
 
-    ws.time(new WebsocketClientEndpoint.MessageHandler() {
-      public void handleMessage(JSONObject responseObject) {
-        System.out.println(responseObject.getJSONObject("response").toString(2));
-      }
-    });
+    ws.time(responseObject -> System.out.println(responseObject.getJSONObject("response").toString(2)));
 
     // ws.markets(new JSONObject(), new WebsocketClientEndpoint.MessageHandler() {
     //   public void handleMessage(JSONObject responseObject) {
@@ -358,6 +356,6 @@ class example{
     // });
 
     // The following function can be used to close the socket, callbacks will no longer be called.
-    // ws.close()
+    //ws.close();
   }
 }

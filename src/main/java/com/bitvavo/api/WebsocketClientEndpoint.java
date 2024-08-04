@@ -1,17 +1,18 @@
 package com.bitvavo.api;
 
+import jakarta.websocket.ClientEndpoint;
 import org.json.*;
 import java.net.URI;
-import javax.websocket.ClientEndpoint;
-import javax.websocket.CloseReason;
-import javax.websocket.ContainerProvider;
-import javax.websocket.OnClose;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-import javax.websocket.OnError;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
-import javax.websocket.PongMessage;
+import jakarta.websocket.ClientEndpoint;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.OnClose;
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.OnOpen;
+import jakarta.websocket.OnError;
+import jakarta.websocket.Session;
+import jakarta.websocket.WebSocketContainer;
+import jakarta.websocket.PongMessage;
 import java.util.concurrent.TimeUnit;
 import java.util.*;
 import java.io.*;
@@ -76,7 +77,7 @@ public class WebsocketClientEndpoint {
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             container.connectToServer(this, endpointURI);
         }
-        catch (javax.websocket.DeploymentException e) {
+        catch (jakarta.websocket.DeploymentException e) {
             try {
                 TimeUnit.MILLISECONDS.sleep(this.reconnectTimer);
                 this.reconnectTimer = this.reconnectTimer * 2;
